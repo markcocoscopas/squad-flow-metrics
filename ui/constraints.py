@@ -15,13 +15,51 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
 
     with st.expander("ℹ️ What this tells you", expanded=False):
         st.markdown(
-            "The Theory of Constraints tells us that every system has one constraint "
-            "(bottleneck) that limits its throughput. This tab helps you identify "
-            "where work is piling up.\n\n"
-            "Without per-item status-change history (not available in the Jira CSV "
-            "export), the analysis uses the *current age* of in-flight items as a "
-            "proxy. Items lingering in a particular state are a signal. "
-            "Phase 2 will add exact time-in-state data via the Jira API."
+            """
+**The core idea — every system has one bottleneck**
+
+The Theory of Constraints (Goldratt) says that in any flow of work, there is
+always *one* step that limits how fast everything else can move. It doesn't
+matter how fast the other steps are — the constraint sets the pace for the
+whole system. Improving anything that isn't the constraint produces no
+meaningful benefit.
+
+**How to find it**
+
+If work is piling up in front of a particular state, that state is likely
+your constraint. Items spend longer there than anywhere else — they queue,
+age, and wait. The **Age distribution chart** below shows this directly:
+the state with the highest median age (the line in the middle of the box)
+is the candidate constraint.
+
+**How to read the box plot**
+
+Each box represents one workflow state. Reading from bottom to top:
+- The **bottom whisker** is the youngest item in that state
+- The **bottom of the box** is the 25th percentile (25% of items are younger than this)
+- The **line in the middle** is the median — half the items are older, half are younger
+- The **top of the box** is the 75th percentile
+- The **top whisker** is the oldest item (excluding outliers)
+- **Dots** above the whisker are outliers — unusually old items that deserve attention
+
+A **tall box** means ages vary widely (unpredictable). A **high box** means
+items are generally old in that state. The state with the highest median is
+your candidate constraint.
+
+**What to do with this**
+
+Once you've identified the constraint state, ask:
+- *Why do items get stuck here?* (skill bottleneck, unclear criteria, too much WIP?)
+- *Is there a WIP limit breach in this state?* (shown below the chart)
+- *Are the blocked items concentrated here?*
+
+Fixing the constraint — not the fastest step — is what increases throughput.
+
+> **Limitation:** Without per-item status-change history (not in the Jira CSV
+> export), this analysis uses the *current age since creation* as a proxy for
+> time spent in each state. It is directionally correct but not exact.
+> Precise time-in-state data requires the Jira API (Phase 2).
+            """
         )
 
     if df.empty:
@@ -32,9 +70,12 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
 
     # ── Candidate constraint ──────────────────────────────────────────────────
     if cr.candidate_constraint_state:
-        st.success(
+        st.warning(
             f"🔍 **Candidate constraint: {cr.candidate_constraint_state}** — "
-            f"highest median in-flight age at **{cr.candidate_constraint_median_days:.1f} days**."
+            f"this state has the highest median in-flight item age at "
+            f"**{cr.candidate_constraint_median_days:.1f} days**. "
+            f"Work is accumulating here more than anywhere else. "
+            f"This is where to focus improvement effort first."
         )
     else:
         st.info("Not enough in-flight data to identify a candidate constraint.")
@@ -60,18 +101,30 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
 
     # ── Age by status chart ───────────────────────────────────────────────────
     st.subheader("Age distribution by workflow state")
+    st.caption(
+        "Each box shows the spread of item ages currently sitting in that workflow state. "
+        "The **middle line** is the median age. The **state with the highest median** "
+        "is your candidate constraint — work is accumulating there. "
+        "Hover over any box for exact values."
+    )
     fig = age_by_status_box(cr.age_by_status)
     st.plotly_chart(fig, use_container_width=True)
 
     # ── WIP breaches ──────────────────────────────────────────────────────────
     st.divider()
     st.subheader("WIP limit breaches")
+    st.caption(
+        "WIP (Work In Progress) limits cap how many items can be in a given state at once. "
+        "Exceeding a limit is a signal that work is piling up faster than it is leaving. "
+        "High WIP increases average cycle time for *everyone* — it doesn't speed things up, "
+        "it slows everything down. Reducing WIP at the constraint is usually the highest-leverage action."
+    )
     if cr.wip_breaches:
         breach_df = pd.DataFrame(cr.wip_breaches)
         breach_df.columns = ["State", "WIP limit", "Current WIP", "Excess"]
         st.dataframe(breach_df, use_container_width=True, hide_index=True)
     else:
-        st.success("No WIP limit breaches detected.")
+        st.success("✅ No WIP limit breaches detected.")
 
     # ── Flow efficiency caveat ────────────────────────────────────────────────
     st.divider()
