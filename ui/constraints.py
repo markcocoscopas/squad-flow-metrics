@@ -84,17 +84,24 @@ Fixing the constraint — not the fastest step — is what increases throughput.
 
     # ── Blocked items ─────────────────────────────────────────────────────────
     col1, col2, col3 = st.columns(3)
-    col1.metric("Blocked items", f"{cr.n_blocked} ({cr.pct_blocked}%)")
-    col2.metric("Total blocked-item age (days)",
-                f"{cr.total_blocked_days:.0f}",
-                help="Sum of ages of all currently blocked items — a lower bound on lost time.")
+    col1.metric(
+        "Blocked items",
+        f"{cr.n_blocked} ({cr.pct_blocked}%)",
+        help="Items currently in the 'Blocked' workflow state OR with the Blocked custom field set.",
+    )
+    col2.metric(
+        "Total blocked-item age (days)",
+        f"{cr.total_blocked_days:.0f}",
+        help="Sum of ages of all currently blocked items — a lower bound on lost time.",
+    )
     col3.metric("Avg blocked-item age (days)", f"{cr.avg_blocked_days:.1f}")
 
     if cr.n_blocked > 0:
         st.caption(
-            "⚠️ Blocked-item ages are a *lower bound* on true blocked duration. "
-            "The Jira snapshot CSV does not record when the Blocked flag was set — "
-            "only that it is currently set. Phase 2 (Jira API) will add precise blocked durations."
+            "⚠️ An item counts as blocked if it is in the **'Blocked' workflow state** "
+            "or has the **Blocked custom field** set. "
+            "Ages shown are time since the item was *created* — a lower bound on true blocked duration "
+            "since the exact date blocking started is not in the Jira CSV export."
         )
 
     st.divider()

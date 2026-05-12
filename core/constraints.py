@@ -57,22 +57,25 @@ def constraint_report(
         ref_date = pd.Timestamp.now(tz=None)
 
     # ── 1. Blocked-item analysis ──────────────────────────────────────────────
+    # Count items that are blocked by EITHER the custom flag OR workflow state.
     total = len(df)
     n_blocked = 0
     total_blocked_days = 0.0
     avg_blocked_days = 0.0
 
-    if "is_blocked" in df.columns:
-        blocked_items = df[df["is_blocked"] == True]  # noqa: E712
-        n_blocked = int(len(blocked_items))
+    flag_blocked  = df["is_blocked"] == True if "is_blocked" in df.columns else pd.Series(False, index=df.index)  # noqa: E712
+    state_blocked = df["status"].str.lower() == "blocked" if "status" in df.columns else pd.Series(False, index=df.index)
+    blocked_mask  = flag_blocked | state_blocked
+    blocked_items = df[blocked_mask]
+    n_blocked = int(len(blocked_items))
 
-        if n_blocked > 0 and "created" in blocked_items.columns:
-            # Proxy for blocked duration: current age of blocked items
-            # (true blocked duration requires changelog — flagged as lower bound)
-            ages = (ref_date - blocked_items["created"]).dt.total_seconds() / _SECS_PER_DAY
-            ages = ages[ages >= 0].dropna()
-            total_blocked_days = float(ages.sum())
-            avg_blocked_days   = float(ages.mean()) if not ages.empty else 0.0
+    if n_blocked > 0 and "created" in blocked_items.columns:
+        # Proxy for blocked duration: current age of blocked items
+        # (true blocked duration requires changelog — flagged as lower bound)
+        ages = (ref_date - blocked_items["created"]).dt.total_seconds() / _SECS_PER_DAY
+        ages = ages[ages >= 0].dropna()
+        total_blocked_days = float(ages.sum())
+        avg_blocked_days   = float(ages.mean()) if not ages.empty else 0.0
 
     pct_blocked = round(100 * n_blocked / max(total, 1), 1)
 
