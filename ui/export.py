@@ -104,30 +104,40 @@ def _build_html_report(
     )
 
     # ── WIP table rows ────────────────────────────────────────────────────────
-    wip_rows = "".join(
-        f"<tr {'class=\"breach\"' if config.wip_limits.get(s, 9999) < v else ''}>"
-        f"<td>{s}</td><td>{v}</td><td>{config.wip_limits.get(s, '—')}</td></tr>"
-        for s, v in wip.items() if v > 0
-    )
+    wip_row_parts = []
+    for s, v in wip.items():
+        if v > 0:
+            cls = ' class="breach"' if config.wip_limits.get(s, 9999) < v else ""
+            limit = config.wip_limits.get(s, "—")
+            wip_row_parts.append(f"<tr{cls}><td>{s}</td><td>{v}</td><td>{limit}</td></tr>")
+    wip_rows = "".join(wip_row_parts)
 
     # ── Ageing table rows ─────────────────────────────────────────────────────
-    age_rows = "".join(
-        f"<tr {'class=\"breach\"' if i.age_days > i.p85_reference > 0 else ''}>"
-        f"<td>{i.key}</td><td>{i.title[:50]}</td><td>{i.item_type}</td>"
-        f"<td>{i.status}</td><td>{i.age_days:.0f}</td><td>{i.p85_reference:.0f}</td>"
-        f"<td>{'🚫' if i.is_blocked else ''}</td></tr>"
-        for i in ageing[:30]
-    )
+    age_row_parts = []
+    for i in ageing[:30]:
+        cls = ' class="breach"' if i.age_days > i.p85_reference > 0 else ""
+        blocked_icon = "🚫" if i.is_blocked else ""
+        age_row_parts.append(
+            f"<tr{cls}><td>{i.key}</td><td>{i.title[:50]}</td><td>{i.item_type}</td>"
+            f"<td>{i.status}</td><td>{i.age_days:.0f}</td><td>{i.p85_reference:.0f}</td>"
+            f"<td>{blocked_icon}</td></tr>"
+        )
+    age_rows = "".join(age_row_parts)
 
     # ── Plan accuracy rows ────────────────────────────────────────────────────
-    pa_rows = "".join(
-        f"<tr><td>{r.key}</td><td>{r.title[:40]}</td>"
-        f"<td>{str(r.target_end)[:10]}</td><td>{str(r.resolved)[:10]}</td>"
-        f"<td {'style=\"color:#D55E00;font-weight:bold\"' if r.slip_days > 3 else ''}>"
-        f"{r.slip_days:+.0f}d</td>"
-        f"<td>{r.sprint_planned}</td><td>{r.sprint_delivered}</td></tr>"
-        for r in sorted(pa_recs, key=lambda x: x.slip_days, reverse=True)[:30]
-    ) if pa_recs else ""
+    if pa_recs:
+        pa_row_parts = []
+        for r in sorted(pa_recs, key=lambda x: x.slip_days, reverse=True)[:30]:
+            slip_style = ' style="color:#D55E00;font-weight:bold"' if r.slip_days > 3 else ""
+            pa_row_parts.append(
+                f"<tr><td>{r.key}</td><td>{r.title[:40]}</td>"
+                f"<td>{str(r.target_end)[:10]}</td><td>{str(r.resolved)[:10]}</td>"
+                f"<td{slip_style}>{r.slip_days:+.0f}d</td>"
+                f"<td>{r.sprint_planned}</td><td>{r.sprint_delivered}</td></tr>"
+            )
+        pa_rows = "".join(pa_row_parts)
+    else:
+        pa_rows = ""
 
     # ── DQ bullets ────────────────────────────────────────────────────────────
     dq_items = "".join(
