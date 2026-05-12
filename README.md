@@ -20,10 +20,10 @@ throughput and cycle time, not story-point velocity.
 | **Throughput** | Weekly run chart + histogram of throughput distribution |
 | **Ageing WIP** | In-flight items vs historical cycle-time percentile reference lines |
 | **Forecasts** | Monte Carlo *How Many?* and *When?* — probabilistic, not velocity-based |
-| **Constraints** | Bottleneck signals from age-by-state and blocked-item analysis |
+| **Constraints** | Bottleneck signals from age-by-state and blocked-item analysis, with plain-English Theory of Constraints guidance |
 | **Plan Accuracy** | Target end date vs actual, sprint slippage *(requires Roadmaps CSV)* |
 | **Compare Squads** | Side-by-side small-multiples — diagnostic, not a league table |
-| **Data Quality** | Exclusion log and data readiness score |
+| **Data Quality** | Exclusion log, scored data readiness (0–100) with per-component breakdown and plain-English verdict |
 | **Export** | Download filtered data as CSV, full HTML report, or individual chart PNGs |
 
 > **No story points. No velocity. No estimates.**
@@ -111,10 +111,16 @@ explored immediately.
 ### Option 2 — Your Jira export
 
 1. In Jira, go to **Issues → Search for issues → Export → Export to CSV (all fields)**
-   — this is the *Created vs Resolved* snapshot format.
+   — the standard *Created vs Resolved* snapshot export. **Do not filter to resolved
+   items only** — export all statuses so in-flight items appear in WIP and Ageing WIP tabs.
 2. *(Optional)* Export the **Advanced Roadmaps** plan view to unlock Plan Accuracy
    and Sprint Slippage tabs.
 3. Upload both files via the sidebar uploaders.
+
+**The one thing to check:** the app uses the **Component/s** field as the squad
+identifier. Make sure your issues have Component/s populated. If your squad name
+lives in a different field (e.g. a custom Team field or a label), update
+`config/default_config.yaml` — change `squad: "Component/s"` to match your field name.
 
 > **Data stays local.** The app runs entirely offline. Nothing is sent anywhere.
 
@@ -243,13 +249,31 @@ pytest tests/ --cov=core --cov-report=term-missing   # with coverage
 
 ---
 
+## Changelog
+
+### v1.0.2
+- **Export tab** — download filtered data as CSV, full self-contained HTML report (interactive charts, no internet required), or individual chart PNGs via Plotly's built-in camera icon
+- **Constraints tab** — added plain-English Theory of Constraints explainer, box plot reading guide, and contextual captions on every section so the tab is useful without prior knowledge
+- **Data Quality score** — now shows a plain-English verdict (Excellent / Good / Fair / Poor), one-line advice, and an expandable breakdown of all four scoring components so you know exactly what to fix
+- **Blocked count fix** — the Ageing WIP "Blocked" metric now correctly counts items in the *Blocked workflow state* as well as items with the custom Blocked field set
+- **Bug fix** — resolved Python 3.11 syntax error in the Export tab (backslash in f-string)
+
+### v1.0.1
+- Export tab added (CSV, HTML report, per-chart PNG)
+- README updated with export documentation
+
+### v1.0.0
+- Initial release: Overview, Cycle Time, Throughput, Ageing WIP, Forecasts, Constraints, Plan Accuracy, Compare Squads, Data Quality
+
+---
+
 ## Publishing a new Windows release
 
 When you want to share a new version with colleagues:
 
 ```bash
-git tag v1.0.1          # bump the number each time
-git push origin v1.0.1
+git tag v1.0.2          # bump the number each time
+git push origin v1.0.2
 ```
 
 That's it. GitHub Actions will automatically:
