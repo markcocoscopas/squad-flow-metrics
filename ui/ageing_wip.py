@@ -34,8 +34,8 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
     fig = ageing_wip_chart(ageing)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Summary
-    n_blocked   = sum(1 for i in ageing if i.is_blocked)
+    # Summary — count items that are blocked by custom field OR by workflow state
+    n_blocked   = sum(1 for i in ageing if i.is_blocked or i.status.lower() == "blocked")
     n_over_p85  = sum(1 for i in ageing if i.age_days > i.p85_reference and i.p85_reference > 0)
     n_over_p95  = sum(1 for i in ageing if i.age_days > i.p95_reference and i.p95_reference > 0)
 
@@ -67,7 +67,7 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
                     "Squad": i.squad,
                     "Age (d)": i.age_days,
                     "p85 ref (d)": round(i.p85_reference, 1),
-                    "Blocked": "🚫" if i.is_blocked else "",
+                    "Blocked": "🚫" if (i.is_blocked or i.status.lower() == "blocked") else "",
                     "Flagged": "⚑" if i.is_flagged else "",
                 })
             st.dataframe(
