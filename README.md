@@ -24,6 +24,7 @@ throughput and cycle time, not story-point velocity.
 | **Plan Accuracy** | Target end date vs actual, sprint slippage *(requires Roadmaps CSV)* |
 | **Compare Squads** | Side-by-side small-multiples — diagnostic, not a league table |
 | **Data Quality** | Exclusion log and data readiness score |
+| **Export** | Download filtered data as CSV, full HTML report, or individual chart PNGs |
 
 > **No story points. No velocity. No estimates.**
 > Forecasts sample from your team's actual historical throughput distribution
@@ -159,6 +160,7 @@ squad_flow_metrics/
 ├── ui/                       # Streamlit tabs (thin — composition only)
 │   ├── sidebar.py
 │   ├── charts.py             # Shared Plotly chart builders
+│   ├── export.py             # Export tab: CSV, HTML report, per-chart PNG
 │   └── ...one file per tab
 ├── reports/
 │   ├── renderer.py           # HTML/PDF report pipeline
@@ -169,6 +171,38 @@ squad_flow_metrics/
 
 The `core/` layer is pure Python with no Streamlit dependency. The same engine
 can be wrapped in a CLI or a scheduled job without changing any analytics code.
+
+---
+
+## Exporting results
+
+The **📥 Export** tab gives you three ways to share your analysis:
+
+### Full HTML report
+Select a squad (or "All squads") and click **Generate & download HTML report**.
+The file is completely self-contained — all charts are interactive Plotly divs
+embedded inside a single `.html` file. It can be:
+- Opened in any browser with no internet connection
+- Emailed to colleagues who don't have the app installed
+- Saved as PDF via browser **Print → Save as PDF** (no extra software needed)
+
+The report includes every metric: KPIs, cycle time, throughput, ageing WIP,
+Monte Carlo forecasts, constraint analysis, plan accuracy, and data quality.
+
+### Filtered data CSV
+Click **Download filtered data as CSV** to export whatever is currently showing
+on screen — including the calculated `cycle_time_days` column — ready for
+Excel, Google Sheets, or further analysis.
+
+### Per-chart PNG
+Every chart has a **📷 camera icon** in the top-right hover toolbar (visible
+when you move your mouse over a chart). Clicking it downloads that chart as a
+PNG image — handy for PowerPoint slides, Teams messages, or Confluence pages.
+
+> **PDF export note:** WeasyPrint (a library that converts HTML to PDF directly)
+> requires complex system libraries on Windows (GTK3). The recommended approach
+> is to use the HTML report and let your browser handle PDF conversion:
+> open the `.html` file → Ctrl+P → **Save as PDF**.
 
 ---
 
