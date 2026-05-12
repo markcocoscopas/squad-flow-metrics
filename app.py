@@ -52,6 +52,7 @@ import ui.constraints   as tab_constraints
 import ui.plan_accuracy as tab_plan
 import ui.compare       as tab_compare
 import ui.data_quality  as tab_quality
+import ui.export        as tab_export
 
 
 # ── Page config ───────────────────────────────────────────────────────────────
@@ -161,6 +162,7 @@ def main() -> None:
         "🎯 Plan Accuracy",
         "👥 Compare Squads",
         "🔬 Data Quality",
+        "📥 Export",
     ])
 
     with tabs[0]:
@@ -185,6 +187,8 @@ def main() -> None:
         tab_compare.render(filtered_df, config)
     with tabs[8]:
         tab_quality.render(quality_report, config)
+    with tabs[9]:
+        tab_export.render(filtered_df, config, quality_report)
 
 
 def _show_welcome() -> None:
@@ -216,6 +220,7 @@ def _show_welcome() -> None:
         | Plan Accuracy | Target vs actual dates, sprint slippage |
         | Compare Squads | Small-multiples side-by-side view |
         | Data Quality | Exclusion log and data readiness score |
+        | Export | Download CSV, full HTML report, or per-chart PNG |
 
         ---
         *Built on Actionable Agile / Vacanti flow principles.*
