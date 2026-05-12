@@ -368,18 +368,35 @@ def age_by_status_box(age_by_status: dict[str, list[float]]) -> go.Figure:
     fig = go.Figure()
     for i, (state, ages) in enumerate(age_by_status.items()):
         if ages:
+            n = len(ages)
+            colour = _palette_colour(i)
             fig.add_trace(go.Box(
                 y=ages,
                 name=state,
-                marker_color=_palette_colour(i),
+                marker_color=colour,
                 boxmean=True,
+                # Always show individual points so sparse states are readable
+                boxpoints="all",
+                jitter=0.3,
+                pointpos=0,
+                marker=dict(
+                    color=colour,
+                    size=7,
+                    opacity=0.7,
+                    line=dict(color="white", width=1),
+                ),
+                hovertemplate=(
+                    f"<b>{state}</b><br>"
+                    "Age: %{y:.1f} days<br>"
+                    f"n = {n} item{'s' if n != 1 else ''}<extra></extra>"
+                ),
             ))
 
     fig.update_layout(
         title="Item Age by Workflow State",
         yaxis_title="Age (calendar days)",
         xaxis_title="Workflow state",
-        height=400,
+        height=420,
         showlegend=False,
         hovermode="closest",
     )
