@@ -1,0 +1,233 @@
+name: Build Windows Package
+
+# Triggers:
+#   1. Push a version tag (e.g. v1.0.1) → builds and attaches zip to a GitHub Release
+#   2. Click "Run workflow" on the Actions tab → builds a test zip (no release needed)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label for the zip (e.g. v1.0.1-test)"
+        required: false
+        default: "dev"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Get the code ────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Work out the version label ──────────────────────────────────────
+      - name: Set version label
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -match 'refs/tags/(.+)') {
+            $ver = $Matches[1]
+          } else {
+            $ver = "${{ github.event.inputs.version }}"
+            if (-not $ver) { $ver = "dev" }
+          }
+          echo "VERSION=$ver" >> $env:GITHUB_ENV
+          echo "Building version: $ver"
+
+      # ── 3. Download Python 3.11 embeddable (no install required) ──────────
+      - name: Download Python 3.11 embeddable package
+        shell: pwsh
+        run: |
+          $url = "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip"
+          Write-Host "Downloading Python 3.11 embeddable (no install needed)..."
+          Invoke-WebRequest -Uri $url -OutFile "python-embed.zip" -UseBasicParsing
+          New-Item -ItemType Directory -Path "bundle\python" | Out-Null
+          Expand-Archive -Path "python-embed.zip" -DestinationPath "bundle\python"
+          Write-Host "Python extracted."
+
+      # ── 4. Enable pip inside the embedded Python ───────────────────────────
+      #    By default the embeddable build blocks pip. We uncomment one line
+      #    in the ._pth file and then bootstrap pip via get-pip.py.
+      - name: Enable pip in embedded Python
+        shell: pwsh
+        run: |
+          $pthFile = Get-ChildItem "bundle\python\python*._pth" | Select-Object -First 1
+          Write-Host "Patching $($pthFile.Name) to enable site-packages..."
+          $content = Get-Content $pthFile.FullName -Raw
+          $content  = $content -replace '#import site', 'import site'
+          Set-Content $pthFile.FullName $content
+
+          Write-Host "Bootstrapping pip..."
+          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" `
+            -OutFile "get-pip.py" -UseBasicParsing
+          & "bundle\python\python.exe" get-pip.py --no-warn-script-location --quiet
+          Write-Host "pip ready."
+
+      # ── 5. Install app dependencies ────────────────────────────────────────
+      - name: Install Python dependencies
+        shell: pwsh
+        run: |
+          Write-Host "Installing dependencies (may take a few minutes)..."
+          & "bundle\python\python.exe" -m pip install `
+              streamlit pandas numpy plotly pyyaml jinja2 `
+              --no-warn-script-location --quiet
+          Write-Host "All dependencies installed."
+
+      # ── 6. Copy application files into the bundle ─────────────────────────
+      - name: Copy application files
+        shell: pwsh
+        run: |
+          $items = @('app.py', 'config', 'core', 'ui', 'reports', 'data', '.streamlit')
+          foreach ($item in $items) {
+            if (Test-Path $item -PathType Container) {
+              Copy-Item -Recurse -Path $item -Destination "bundle\$item"
+            } elseif (Test-Path $item -PathType Leaf) {
+              Copy-Item -Path $item -Destination "bundle\$item"
+            }
+          }
+          Write-Host "Application files copied."
+
+      # ── 7. Create the double-click launcher ───────────────────────────────
+      - name: Create launcher
+        shell: pwsh
+        run: |
+          $bat = @'
+          @echo off
+          title Squad Flow Metrics
+          cls
+          echo.
+          echo  =======================================================
+          echo   Squad Flow Metrics  ^|  Loading, please wait...
+          echo  =======================================================
+          echo.
+          echo   Your browser will open automatically in a few seconds.
+          echo.
+          echo   - To STOP the app, close this window.
+          echo   - If your browser does not open, go to:
+          echo       http://localhost:8501
+          echo.
+          echo  =======================================================
+          echo.
+
+          cd /d "%~dp0"
+
+          REM Open browser after 7 seconds (runs silently in background)
+          start "" /min cmd /c "timeout /t 7 /nobreak >nul && start http://localhost:8501"
+
+          REM Launch the app using the bundled Python (no system Python needed)
+          python\python.exe -m streamlit run app.py ^
+            --server.headless=true ^
+            --server.port=8501 ^
+            --browser.gatherUsageStats=false
+
+          echo.
+          echo   The app has stopped. You can close this window.
+          pause
+          '@
+          Set-Content "bundle\Run Squad Flow Metrics.bat" $bat -Encoding ASCII
+          Write-Host "Launcher created."
+
+      # ── 8. Create plain-English instructions ──────────────────────────────
+      - name: Create START HERE instructions
+        shell: pwsh
+        run: |
+          $txt = @'
+          ================================================================
+          SQUAD FLOW METRICS  —  Quick Start Guide
+          ================================================================
+
+          STARTING THE APP
+          ----------------
+          Double-click:  "Run Squad Flow Metrics.bat"
+
+          A black window will appear — this is normal. It is the engine
+          running in the background. Do not close it while using the app.
+
+          Your browser will open automatically after a few seconds.
+          If it does not, open your browser and go to:
+              http://localhost:8501
+
+          When you are finished, close the black window to stop the app.
+
+
+          YOUR DATA STAYS ON YOUR COMPUTER
+          ---------------------------------
+          Nothing is sent anywhere. All analysis runs locally.
+          You can use this tool on an air-gapped machine with no internet.
+
+
+          LOADING YOUR JIRA DATA
+          -----------------------
+          Option A — Use the built-in sample data
+            Click "Load sample data" in the left-hand sidebar.
+            Explore all features immediately with no Jira export needed.
+
+          Option B — Load your own Jira export
+            1. In Jira: Issues > Search for issues >
+                        Export > Export to CSV (all fields)
+            2. In the app: upload the file via the sidebar uploader.
+
+          Option C — Also upload an Advanced Roadmaps export
+            Unlocks the Plan Accuracy and Sprint Slippage tabs.
+
+
+          SOMETHING NOT WORKING?
+          ----------------------
+          - Windows may show a security warning the first time.
+            Click "More info" then "Run anyway".
+          - If your firewall asks for permission, click "Allow".
+          - If the app does not start, check nothing else is using
+            port 8501 (e.g. another copy of the app already running).
+          - Try closing the black window and re-opening the .bat file.
+
+
+          ================================================================
+          '@
+          Set-Content "bundle\START HERE.txt" $txt -Encoding UTF8
+          Write-Host "Instructions created."
+
+      # ── 9. Zip everything up ──────────────────────────────────────────────
+      - name: Create zip archive
+        shell: pwsh
+        run: |
+          $zipName = "Squad-Flow-Metrics-$env:VERSION-Windows.zip"
+          Write-Host "Creating $zipName ..."
+          Compress-Archive -Path "bundle\*" -DestinationPath $zipName -CompressionLevel Optimal
+          $sizeMB = [math]::Round((Get-Item $zipName).Length / 1MB, 1)
+          Write-Host "Done: $zipName  ($sizeMB MB)"
+          echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
+
+      # ── 10. Upload zip as a build artefact (always) ───────────────────────
+      - name: Upload zip as workflow artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.ZIP_NAME }}
+          retention-days: 30
+
+      # ── 11. Attach zip to the GitHub Release (tag builds only) ────────────
+      - name: Attach zip to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          generate_release_notes: true
+          body: |
+            ## Squad Flow Metrics ${{ env.VERSION }} — Windows Package
+
+            ### Installation (no Python required)
+            1. Download **${{ env.ZIP_NAME }}** below
+            2. Extract the zip to any folder (e.g. your Desktop)
+            3. Open the extracted folder
+            4. Double-click **"Run Squad Flow Metrics.bat"**
+            5. Your browser opens automatically at http://localhost:8501
+
+            See **START HERE.txt** inside the zip for full instructions.
+
+            ---
+            *Requires Windows 10 or later (64-bit). No Python installation needed.*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

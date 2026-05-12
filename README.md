@@ -31,7 +31,16 @@ throughput and cycle time, not story-point velocity.
 
 ---
 
-## Quick start
+## Download (Windows — no Python required)
+
+> **Just want to run it on Windows?**
+> Go to the [**Releases page**](https://github.com/markcocoscopas/squad-flow-metrics/releases/latest),
+> download the `.zip` file, extract it anywhere, and double-click
+> **"Run Squad Flow Metrics.bat"**. That's it — no Python, no admin rights, no setup.
+
+---
+
+## Quick start (developers)
 
 ### macOS / Linux
 
@@ -197,6 +206,32 @@ pytest tests/ --cov=core --cov-report=term-missing   # with coverage
   in every chart that uses it.
 - **Squad autonomy preserved.** The Compare Squads tab is diagnostic, not a
   performance ranking.
+
+---
+
+## Publishing a new Windows release
+
+When you want to share a new version with colleagues:
+
+```bash
+git tag v1.0.1          # bump the number each time
+git push origin v1.0.1
+```
+
+That's it. GitHub Actions will automatically:
+1. Spin up a Windows build server
+2. Bundle the app with a self-contained Python (no install needed)
+3. Create a zip (~150–250 MB)
+4. Attach it to the Releases page with download instructions
+
+The build takes about **5–8 minutes**. You can watch it under the
+**Actions** tab on GitHub. When it turns green, the zip is ready to share.
+
+Colleagues just need the link:
+`https://github.com/markcocoscopas/squad-flow-metrics/releases/latest`
+
+You can also trigger a test build at any time **without** creating a release
+by going to **Actions → Build Windows Package → Run workflow**.
 
 ---
 
