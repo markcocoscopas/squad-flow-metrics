@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Squad Flow Report — {{ squad_name }}</title>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; color: #222; margin: 2cm; }
+  h1   { color: #0072B2; border-bottom: 2px solid #0072B2; padding-bottom: 6px; }
+  h2   { color: #0072B2; margin-top: 1.5em; }
+  h3   { color: #555; margin-top: 1em; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+  th    { background: #0072B2; color: #fff; padding: 6px 10px; text-align: left; }
+  td    { padding: 5px 10px; border-bottom: 1px solid #ddd; }
+  tr:nth-child(even) td { background: #f5f8fb; }
+  .metric-grid { display: flex; gap: 1em; flex-wrap: wrap; margin-bottom: 1.5em; }
+  .metric-card { background: #f0f6ff; border: 1px solid #b3d0f7; border-radius: 6px;
+                 padding: 10px 18px; min-width: 120px; }
+  .metric-card .value { font-size: 22px; font-weight: bold; color: #0072B2; }
+  .metric-card .label { font-size: 11px; color: #666; }
+  .chart-img { width: 100%; max-width: 900px; border: 1px solid #ddd; margin: 0.5em 0; }
+  .caveat { background: #fff3cd; border-left: 4px solid #E69F00; padding: 8px 12px;
+            margin: 0.5em 0; font-size: 12px; }
+  .breach { background: #fff3cd; font-weight: bold; }
+  .constraint-box { background: #e8f4fd; border: 2px solid #0072B2; border-radius: 6px;
+                    padding: 10px 16px; margin: 1em 0; }
+  ul { margin: 0.3em 0 0.8em 1.2em; }
+  li { margin-bottom: 3px; }
+  .footer { margin-top: 2em; font-size: 11px; color: #aaa; border-top: 1px solid #ddd; padding-top: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Squad Flow Metrics Report</h1>
+<p><strong>Squad:</strong> {{ squad_name }} &nbsp;&nbsp;
+   <strong>Items resolved:</strong> {{ total_resolved }}</p>
+
+<h2>Headline Metrics</h2>
+<div class="metric-grid">
+  <div class="metric-card">
+    <div class="value">{{ ct.p50 | round(1) }}d</div>
+    <div class="label">Median cycle time</div>
+  </div>
+  <div class="metric-card">
+    <div class="value">{{ ct.p85 | round(1) }}d</div>
+    <div class="label">85th-pct cycle time</div>
+  </div>
+  <div class="metric-card">
+    <div class="value">{{ ct.p95 | round(1) }}d</div>
+    <div class="label">95th-pct cycle time</div>
+  </div>
+  <div class="metric-card">
+    <div class="value">{{ tp.mean_per_week | round(1) }}</div>
+    <div class="label">Avg items / week</div>
+  </div>
+  <div class="metric-card">
+    <div class="value">{{ n_over_p85 }}</div>
+    <div class="label">Items older than p85</div>
+  </div>
+</div>
+
+<p class="caveat">
+  <strong>Note:</strong> Cycle times are calculated in calendar days (Resolved − Created).
+  This is a lower bound on true elapsed time. Per-state residency analysis requires
+  Jira API integration (Phase 2).
+</p>
+
+<h2>Cycle Time</h2>
+{% if ct_chart_b64 %}
+<img class="chart-img" src="data:image/png;base64,{{ ct_chart_b64 }}" alt="Cycle time chart">
+{% else %}
+<p><em>Chart not available.</em></p>
+{% endif %}
+
+<h3>By work-item type</h3>
+<table>
+  <tr><th>Type</th><th>Count</th><th>Median (d)</th><th>85th (d)</th><th>95th (d)</th><th>Mean (d)</th></tr>
+  {% for itype, s in ct_by_type.items() %}
+  {% if s.count > 0 %}
+  <tr>
+    <td>{{ itype }}</td>
+    <td>{{ s.count }}</td>
+    <td>{{ s.p50 | round(1) }}</td>
+    <td>{{ s.p85 | round(1) }}</td>
+    <td>{{ s.p95 | round(1) }}</td>
+    <td>{{ s.mean | round(1) }}</td>
+  </tr>
+  {% endif %}
+  {% endfor %}
+</table>
+
+<h2>Throughput</h2>
+{% if tp_chart_b64 %}
+<img class="chart-img" src="data:image/png;base64,{{ tp_chart_b64 }}" alt="Throughput chart">
+{% else %}
+<p><em>Chart not available.</em></p>
+{% endif %}
+<p>
+  Mean: <strong>{{ tp.mean_per_week | round(1) }} items/week</strong> &nbsp;|&nbsp;
+  Std dev: {{ tp.std_per_week | round(1) }} &nbsp;|&nbsp;
+  Range: {{ tp.min_per_week }}–{{ tp.max_per_week }}
+</p>
+
+<h2>Ageing WIP</h2>
+{% if age_chart_b64 %}
+<img class="chart-img" src="data:image/png;base64,{{ age_chart_b64 }}" alt="Ageing WIP chart">
+{% else %}
+<p><em>Chart not available.</em></p>
+{% endif %}
+
+<h2>Constraints Analysis</h2>
+{% if constraint_report.candidate_constraint_state %}
+<div class="constraint-box">
+  <strong>Candidate constraint: {{ constraint_report.candidate_constraint_state }}</strong><br>
+  Highest median in-flight age at <strong>{{ constraint_report.candidate_constraint_median_days }}d</strong>.
+</div>
+{% else %}
+<p>Not enough in-flight data to identify a candidate constraint.</p>
+{% endif %}
+
+<p>
+  Blocked items: <strong>{{ constraint_report.n_blocked }} ({{ constraint_report.pct_blocked }}%)</strong> &nbsp;|&nbsp;
+  Total blocked-item age: <strong>{{ constraint_report.total_blocked_days }}d</strong>
+</p>
+
+{% if constraint_report.wip_breaches %}
+<h3>WIP Limit Breaches</h3>
+<table>
+  <tr><th>State</th><th>WIP Limit</th><th>Current WIP</th><th>Excess</th></tr>
+  {% for b in constraint_report.wip_breaches %}
+  <tr class="breach">
+    <td>{{ b.state }}</td><td>{{ b.wip_limit }}</td>
+    <td>{{ b.current_wip }}</td><td>{{ b.excess }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Current WIP</h2>
+<table>
+  <tr><th>State</th><th>Items</th><th>WIP Limit</th></tr>
+  {% for state, count in wip.items() %}
+  <tr {% if wip_limits.get(state) and count > wip_limits[state] %}class="breach"{% endif %}>
+    <td>{{ state }}</td>
+    <td>{{ count }}</td>
+    <td>{{ wip_limits.get(state, '—') }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>Data Quality</h2>
+<p>Readiness score: <strong>{{ dq_score | round(0) | int }} / 100</strong></p>
+<ul>
+  {% for bullet in quality_bullets %}
+  <li>{{ bullet | striptags }}</li>
+  {% endfor %}
+</ul>
+
+<div class="footer">
+  Generated by Squad Flow Metrics · Flow-based analysis (Vacanti / Actionable Agile) ·
+  Forecasts use Monte Carlo sampling from historical throughput, not story points.
+</div>
+
+</body>
+</html>

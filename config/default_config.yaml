@@ -1,0 +1,89 @@
+# Squad Flow Metrics — default column configuration
+# Matches the Jira "Created vs Resolved" snapshot export format
+# Override any section by creating a custom config and loading it via the sidebar.
+
+# ── Column mapping ────────────────────────────────────────────────────────────
+columns:
+  id:           "Issue key"
+  title:        "Summary"
+  type:         "Issue Type"
+  status:       "Status"
+  created:      "Created"
+  resolved:     "Resolved"
+  squad:        "Component/s"        # Nomination: use Component/s as squad key
+  labels:       "Labels"             # first Labels column (index 25); duplicates merged
+  story_points: "Custom field (Story Points)"
+  blocked:      "Custom field (Blocked)"
+  flagged:      "Custom field (Flagged)"
+  age:          "Custom field (Age)"
+  sprint:       "Sprint"             # first Sprint column; compound sprints parsed
+  epic_link:    "Custom field (Epic Link)"
+
+# ── Advanced Roadmaps join (optional second CSV) ──────────────────────────────
+roadmaps_columns:
+  id:               "Issue key"
+  hierarchy:        "Hierarchy"
+  target_start:     "Target start date"
+  target_end:       "Target end date"
+  progress_pct:     "Progress (%)"
+  progress_done_sp: "Progress completed (sp)"
+  progress_rem_sp:  "Progress remaining (sp)"
+  done_ic:          "Done IC"
+  total_ic:         "Total IC"
+  rag:              "RAG"
+
+# ── Date parsing ──────────────────────────────────────────────────────────────
+date_format: "%d/%b/%y %I:%M %p"    # e.g. 08/May/26 9:21 AM
+
+# ── Work-item type filtering ──────────────────────────────────────────────────
+work_item_types:
+  include: [Story, Bug, Task, Spike, Sub-task]
+  exclude: [Epic, Initiative, Theme]
+
+# ── Workflow definition ───────────────────────────────────────────────────────
+# category: "queue" | "active" | "done" | "excluded"
+# start: true marks the column where cycle time begins
+# end: true marks the column where cycle time ends
+#
+# NOTE: Without status-change history in the CSV, state residency cannot be
+# calculated per-item. Workflow config is used for display ordering and
+# WIP classification only in v1. Phase 2 (Jira API) will unlock per-state
+# residency once changelog data is available.
+workflow:
+  states:
+    - {name: "Funnel",       category: "queue",    start: false, end: false}
+    - {name: "To Do",        category: "queue",    start: false, end: false}
+    - {name: "In Progress",  category: "active",   start: true,  end: false}
+    - {name: "Implementing", category: "active",   start: false, end: false}
+    - {name: "Review",       category: "queue",    start: false, end: false}
+    - {name: "Blocked",      category: "queue",    start: false, end: false}
+    - {name: "Done",         category: "done",     start: false, end: true}
+    - {name: "Cancelled",    category: "excluded", start: false, end: false}
+
+# ── WIP limits (per state, applied across all squads unless overridden) ───────
+wip_limits:
+  "In Progress":  6
+  "Implementing": 6
+  "Review":       4
+  "Blocked":      2
+
+# ── Squad capacity (% of full-time sprint capacity available for feature work) -
+squad_capacity_pct: 80
+
+# ── Throughput / Monte Carlo ──────────────────────────────────────────────────
+monte_carlo:
+  default_window_weeks: 12
+  n_simulations: 10_000
+  confidence_levels: [50, 70, 85, 95]
+
+# ── Display ───────────────────────────────────────────────────────────────────
+# Colour-blind-safe Okabe–Ito palette (8 colours)
+palette:
+  - "#E69F00"   # orange
+  - "#56B4E9"   # sky blue
+  - "#009E73"   # bluish green
+  - "#F0E442"   # yellow
+  - "#0072B2"   # blue
+  - "#D55E00"   # vermilion
+  - "#CC79A7"   # reddish purple
+  - "#000000"   # black
