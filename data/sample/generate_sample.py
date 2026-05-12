@@ -76,8 +76,13 @@ def weighted_choice(choices: dict[str, float], rng: random.Random) -> str:
 
 
 def fmt_date(dt: datetime) -> str:
-    """Format like Jira: '08/May/26 9:21 AM'"""
-    return dt.strftime("%-d/%b/%y %-I:%M %p")
+    """
+    Format like Jira: '8/May/26 9:21 AM'
+    Uses f-strings instead of %-d / %-I to stay portable on Windows.
+    """
+    hour = dt.hour % 12 or 12
+    ampm = "AM" if dt.hour < 12 else "PM"
+    return f"{dt.day}/{dt.strftime('%b/%y')} {hour}:{dt.strftime('%M')} {ampm}"
 
 
 def generate_sprint_field(created: datetime, resolved: datetime | None, squad: str) -> str:
@@ -220,8 +225,8 @@ def main() -> None:
                         "Team": squad_name,
                         "Assignee": f"user{rng.randint(1, 8)}",
                         "Sprint": sprint_str,
-                        "Target start date": target_start.strftime("%-d/%b/%y"),
-                        "Target end date": target_end.strftime("%-d/%b/%y"),
+                        "Target start date": f"{target_start.day}/{target_start.strftime('%b/%y')}",
+                        "Target end date":   f"{target_end.day}/{target_end.strftime('%b/%y')}",
                         "Due date": "",
                         "Story points": sp,
                         "Parent": "",

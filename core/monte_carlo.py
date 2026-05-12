@@ -29,7 +29,6 @@ Design notes
 from __future__ import annotations
 
 import logging
-import multiprocessing
 from typing import Sequence
 
 import numpy as np
@@ -40,12 +39,6 @@ log = logging.getLogger(__name__)
 
 # Upper bound on simulation periods to avoid infinite loops with zero-throughput data
 _MAX_PERIODS = 2_000
-
-# Parallelism threshold: above this n_sims, use multiprocessing
-_PARALLEL_THRESHOLD = 5_000
-
-# Number of worker processes (None → cpu_count)
-_N_WORKERS: int | None = None
 
 
 # ── Internal vectorised kernels ───────────────────────────────────────────────
@@ -229,34 +222,16 @@ def _run_sims(
     seed: int | None,
 ) -> list[int]:
     """
-    Run *n_sims* simulations, dispatching to either a single vectorised call
-    or a multiprocessing pool depending on size.
+    Run *n_sims* simulations using the vectorised numpy kernel.
+
+    Multiprocessing is intentionally disabled: Streamlit re-imports the module
+    on every worker spawn on Windows (no ``if __name__ == '__main__':`` guard),
+    which causes an infinite process-spawn loop.  The vectorised numpy kernel
+    completes 50k simulations in well under a second on a laptop, so
+    parallelism provides no meaningful benefit here.
     """
-    if n_sims <= _PARALLEL_THRESHOLD:
-        result = worker_fn((*extra_args, n_sims, seed))
-        return result
-
-    # Split into chunks across workers
-    n_workers = _N_WORKERS or multiprocessing.cpu_count()
-    chunk_size = max(1, n_sims // n_workers)
-    chunks = []
-    remaining = n_sims
-    worker_seed = seed
-    while remaining > 0:
-        sz = min(chunk_size, remaining)
-        chunks.append((*extra_args, sz, worker_seed))
-        remaining -= sz
-        if worker_seed is not None:
-            worker_seed += 1   # different seed per chunk
-
-    with multiprocessing.Pool(processes=n_workers) as pool:
-        results = pool.map(worker_fn, chunks)
-
-    # Flatten
-    flat: list[int] = []
-    for r in results:
-        flat.extend(r)
-    return flat
+    result = worker_fn((*extra_args, n_sims, seed))
+    return result
 
 
 # ── Scope-growth / risk-adjusted variant ─────────────────────────────────────

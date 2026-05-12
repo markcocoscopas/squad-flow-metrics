@@ -155,11 +155,16 @@ def _show_percentile_table(pv: dict[int, float], mode: str) -> None:
     st.dataframe(pd.DataFrame(rows), use_container_width=False, hide_index=True)
 
 
+def _fmt_date_portable(dt: "pd.Timestamp") -> str:
+    """Format a date as '8 May 2026' without %-d (Linux-only strftime flag)."""
+    return f"{dt.day} {dt.strftime('%B %Y')}"
+
+
 def _show_date_estimates(pv: dict[int, float]) -> None:
     today = pd.Timestamp.now().normalize()
     st.caption("Estimated completion dates from today:")
     dates = {
-        f"{c}% confidence": (today + timedelta(weeks=int(v))).strftime("%-d %B %Y")
+        f"{c}% confidence": _fmt_date_portable(today + timedelta(weeks=int(v)))
         for c, v in sorted(pv.items())
     }
     st.json(dates)
