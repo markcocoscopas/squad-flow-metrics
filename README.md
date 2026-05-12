@@ -36,36 +36,56 @@ throughput and cycle time, not story-point velocity.
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/YOUR_ORG/squad-flow-metrics.git
+git clone https://github.com/markcocoscopas/squad-flow-metrics.git
 cd squad-flow-metrics
 ./run.sh
 ```
 
 ### Windows
 
+> **Before you start:** Make sure Python 3.9+ is installed from
+> [python.org](https://www.python.org/downloads/). During installation,
+> tick **"Add Python to PATH"** — without this, the launcher cannot find Python.
+
 ```
-git clone https://github.com/YOUR_ORG/squad-flow-metrics.git
+git clone https://github.com/markcocoscopas/squad-flow-metrics.git
 cd squad-flow-metrics
 run.bat
 ```
 
-The launcher creates a virtual environment, installs dependencies, and opens
-the app at **http://localhost:8501**.
+Or double-click `run.bat` in File Explorer.
+
+The launcher creates a virtual environment, installs all dependencies, and
+opens the app at **http://localhost:8501**. On first run this takes about
+30–60 seconds; subsequent launches are instant.
+
+> **PDF export on Windows:** the HTML report exports fine on all platforms.
+> PDF export additionally needs [WeasyPrint system libraries (GTK3)](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html),
+> which are complex to install on Windows. HTML is the recommended format
+> for sharing with colleagues.
 
 ---
 
 ## Manual setup (if you prefer)
 
 ```bash
+# macOS / Linux
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-**Requirements:** Python 3.9 or later. No other system dependencies for core
-features. PDF export additionally requires [WeasyPrint system libraries](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html) — HTML
-export works without them.
+```bat
+:: Windows (Command Prompt)
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+**Requirements:** Python 3.9 or later. No other system dependencies needed
+for all core features and HTML export.
 
 ---
 
