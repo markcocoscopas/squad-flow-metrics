@@ -18,6 +18,7 @@ import streamlit as st
 import yaml
 
 from config.schema import AppConfig, load_config, load_config_from_dict
+from core.updater import check_for_update, download_and_apply, current_version
 
 
 @dataclass
@@ -42,6 +43,42 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
     state = SidebarState()
 
     st.sidebar.title("Squad Flow Metrics")
+    st.sidebar.caption(f"Version {current_version()}")
+
+    # ── Update check (once per session) ──────────────────────────────────────
+    if "update_check_done" not in st.session_state:
+        available, latest_tag, release_url = check_for_update()
+        st.session_state["update_check_done"] = True
+        st.session_state["update_available"]  = available
+        st.session_state["update_tag"]        = latest_tag
+        st.session_state["update_url"]        = release_url
+        st.session_state["update_applied"]    = False
+
+    if st.session_state.get("update_applied"):
+        st.sidebar.success(
+            f"✅ Updated to {st.session_state['update_tag']}! "
+            "Please **close and reopen** the app to use the new version."
+        )
+    elif st.session_state.get("update_available"):
+        latest_tag = st.session_state["update_tag"]
+        st.sidebar.warning(
+            f"🆕 **Version {latest_tag} is available!**  \n"
+            "Click below to update — takes about 30 seconds."
+        )
+        if st.sidebar.button("⬇️ Update now", use_container_width=True, key="do_update"):
+            progress_placeholder = st.sidebar.empty()
+            with st.spinner("Updating…"):
+                success, msg = download_and_apply(
+                    progress_fn=lambda m: progress_placeholder.caption(m)
+                )
+            progress_placeholder.empty()
+            if success:
+                st.session_state["update_applied"] = True
+                st.session_state["update_available"] = False
+                st.rerun()
+            else:
+                st.sidebar.error(f"Update failed: {msg}")
+
     st.sidebar.markdown("---")
 
     # ── Data source ───────────────────────────────────────────────────────────
