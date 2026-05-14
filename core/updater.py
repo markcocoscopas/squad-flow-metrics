@@ -32,8 +32,6 @@ VERSION_FILE = APP_ROOT / "version.txt"
 # These paths inside the zip are never overwritten during an update
 _SKIP_PREFIXES = (
     "python/",       # bundled Python runtime (Windows only)
-    "Run Squad",     # launcher .bat
-    "START HERE",    # instructions .txt
 )
 
 

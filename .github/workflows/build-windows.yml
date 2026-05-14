@@ -120,7 +120,7 @@ jobs:
 
           REM Launch the app using the bundled Python (no system Python needed)
           REM Browser is NOT opened automatically to avoid Windows security prompts.
-          python\python.exe -m streamlit run app.py ^
+          "%~dp0python\python.exe" -m streamlit run "%~dp0app.py" ^
             --server.headless=true ^
             --server.port=8501 ^
             --browser.gatherUsageStats=false ^
