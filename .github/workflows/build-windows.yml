@@ -253,13 +253,11 @@ jobs:
       # ── 9. Zip everything up ──────────────────────────────────────────────
       #    Bundle is wrapped in a fixed "Squad-Flow-Metrics" subfolder so
       #    the extracted folder name never changes between versions.
-      #    Users can update in-place without renaming anything.
       - name: Create zip archive
         shell: pwsh
         run: |
           $zipName = "Squad-Flow-Metrics-$env:VERSION-Windows.zip"
           Write-Host "Creating $zipName ..."
-          # Wrap bundle contents in a fixed top-level folder
           New-Item -ItemType Directory -Path "zip-root\Squad-Flow-Metrics" | Out-Null
           Copy-Item -Recurse -Path "bundle\*" -Destination "zip-root\Squad-Flow-Metrics"
           Compress-Archive -Path "zip-root\*" -DestinationPath $zipName -CompressionLevel Optimal
@@ -267,7 +265,84 @@ jobs:
           Write-Host "Done: $zipName  ($sizeMB MB)"
           echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
 
-      # ── 10. Upload zip as a build artefact (always) ───────────────────────
+      # ── 10. Install Inno Setup ─────────────────────────────────────────────
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          Write-Host "Inno Setup installed."
+
+      # ── 11. Build Windows installer (.exe) ────────────────────────────────
+      #    Installs to %LOCALAPPDATA%\SquadFlowMetrics — no admin / UAC needed.
+      #    Installed files have no "downloaded from internet" zone tag, so
+      #    Windows Defender / SmartScreen will not fire on daily use.
+      - name: Create Inno Setup script
+        shell: pwsh
+        run: |
+          $ver  = $env:VERSION.TrimStart('v')
+          $iss = @"
+          [Setup]
+          AppName=Squad Flow Metrics
+          AppVersion=$ver
+          AppPublisher=Squad Flow Metrics
+          AppPublisherURL=https://github.com/markcocoscopas/squad-flow-metrics
+          AppSupportURL=https://github.com/markcocoscopas/squad-flow-metrics/issues
+          AppUpdatesURL=https://github.com/markcocoscopas/squad-flow-metrics/releases
+          DefaultDirName={localappdata}\SquadFlowMetrics
+          DefaultGroupName=Squad Flow Metrics
+          AllowNoIcons=yes
+          OutputDir=.
+          OutputBaseFilename=Squad-Flow-Metrics-$($env:VERSION)-Setup
+          Compression=lzma2/ultra64
+          SolidCompression=yes
+          PrivilegesRequired=lowest
+          PrivilegesRequiredOverridesAllowed=commandline
+          DisableProgramGroupPage=yes
+          DisableReadyMemo=yes
+          DisableWelcomePage=no
+          WizardStyle=modern
+          UninstallDisplayName=Squad Flow Metrics
+
+          [Languages]
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+
+          [Tasks]
+          Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
+
+          [Files]
+          Source: "bundle\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+          [Icons]
+          Name: "{group}\Squad Flow Metrics";           Filename: "{app}\Run Squad Flow Metrics.bat"; WorkingDir: "{app}"
+          Name: "{group}\Uninstall Squad Flow Metrics"; Filename: "{uninstallexe}"
+          Name: "{userdesktop}\Squad Flow Metrics";     Filename: "{app}\Run Squad Flow Metrics.bat"; WorkingDir: "{app}"; Tasks: desktopicon
+
+          [Run]
+          Filename: "{app}\Run Squad Flow Metrics.bat"; Description: "Launch Squad Flow Metrics now"; Flags: nowait postinstall skipifsilent shellexec
+          "@
+          Set-Content "setup.iss" $iss -Encoding UTF8
+          Write-Host "Inno Setup script written."
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc    = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          Write-Host "Compiling installer..."
+          & $iscc "setup.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+          $setupName = "Squad-Flow-Metrics-$env:VERSION-Setup.exe"
+          $sizeMB    = [math]::Round((Get-Item $setupName).Length / 1MB, 1)
+          Write-Host "Installer ready: $setupName  ($sizeMB MB)"
+          echo "SETUP_NAME=$setupName" >> $env:GITHUB_ENV
+
+      # ── 12. Upload both artefacts (always) ────────────────────────────────
+      - name: Upload installer as workflow artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.SETUP_NAME }}
+          path: ${{ env.SETUP_NAME }}
+          retention-days: 30
+
       - name: Upload zip as workflow artefact
         uses: actions/upload-artifact@v4
         with:
@@ -275,34 +350,33 @@ jobs:
           path: ${{ env.ZIP_NAME }}
           retention-days: 30
 
-      # ── 11. Attach zip to the GitHub Release (tag builds only) ────────────
-      - name: Attach zip to GitHub Release
+      # ── 13. Attach both to the GitHub Release (tag builds only) ───────────
+      - name: Attach files to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ZIP_NAME }}
+          files: |
+            ${{ env.SETUP_NAME }}
+            ${{ env.ZIP_NAME }}
           generate_release_notes: true
           body: |
-            ## Squad Flow Metrics ${{ env.VERSION }} — Windows Package
+            ## Squad Flow Metrics ${{ env.VERSION }} — Windows
 
-            ### ⚠️ Do this FIRST — before extracting the zip
-            Windows marks downloaded files as "untrusted" which causes Defender warnings.
-            Remove those marks before you extract:
-            1. **Right-click** `${{ env.ZIP_NAME }}`
-            2. Click **Properties**
-            3. Tick the **Unblock** checkbox at the bottom
-            4. Click **OK**
-            5. Now extract normally
+            ### ✅ Recommended: Installer (easiest, no Defender hassle)
+            1. Download **${{ env.SETUP_NAME }}** below
+            2. If SmartScreen appears, click **More info → Run anyway** (installer is unsigned but safe — this happens once only)
+            3. Click through the short installer wizard (no admin rights needed)
+            4. Launch from the **Start Menu** or **Desktop shortcut**
+            5. Open your browser at **http://localhost:8501**
 
-            ### Installation (no Python required)
-            1. Download **${{ env.ZIP_NAME }}** and unblock it (see above)
-            2. Extract the zip to any folder (e.g. your Desktop)
-            3. Open the **Squad-Flow-Metrics** folder
-            4. Double-click **"Run Squad Flow Metrics.bat"**
-            5. If SmartScreen appears, click **More info → Run anyway** (first run only)
-            6. Open your browser and go to **http://localhost:8501**
+            After installation, Windows Defender will never prompt again — the app runs from your user profile without any internet zone tags.
 
-            See **START HERE.txt** inside the zip for full instructions.
+            ---
+
+            ### Alternative: Portable zip (advanced users)
+            1. Download **${{ env.ZIP_NAME }}**
+            2. **Right-click the zip → Properties → tick Unblock → OK** before extracting
+            3. Extract to any folder and double-click **"Run Squad Flow Metrics.bat"**
 
             ---
             *Requires Windows 10 or later (64-bit). No Python installation needed.*
