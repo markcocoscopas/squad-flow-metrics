@@ -94,7 +94,14 @@ def _load_data(
     rm_df = None
     if roadmaps_path:
         try:
-            rm_df = load_roadmaps(roadmaps_path, config)
+            rm_paths = [roadmaps_path] if isinstance(roadmaps_path, str) else roadmaps_path
+            rm_frames = [load_roadmaps(p, config) for p in rm_paths]
+            if len(rm_frames) == 1:
+                rm_df = rm_frames[0]
+            else:
+                combined = pd.concat(rm_frames, ignore_index=True)
+                rm_df = combined.drop_duplicates(subset=["key"], keep="first")
+                log.info("Combined %d roadmap files → %d rows.", len(rm_frames), len(rm_df))
         except Exception as exc:
             log.warning("Could not load roadmaps CSV: %s", exc)
             st.sidebar.warning(f"Roadmaps CSV skipped: {exc}")
@@ -109,7 +116,8 @@ def _get_or_load(state: "SidebarState") -> tuple[pd.DataFrame | None, object | N
     """
     # Normalise snapshot_path to a tuple so it's hashable for the cache key
     snap_key = tuple(state.snapshot_path) if isinstance(state.snapshot_path, list) else (state.snapshot_path,)
-    cache_key = (snap_key, state.roadmaps_path)
+    rm_key   = tuple(state.roadmaps_path) if isinstance(state.roadmaps_path, list) else (state.roadmaps_path,)
+    cache_key = (snap_key, rm_key)
 
     if (
         state.refreshed

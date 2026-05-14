@@ -24,7 +24,7 @@ from core.updater import check_for_update, current_version
 @dataclass
 class SidebarState:
     snapshot_path:  str | list | None = None   # str (single) or list[str] (multi)
-    roadmaps_path:  str | None        = None
+    roadmaps_path:  str | list | None = None   # str (single) or list[str] (multi)
     config:         AppConfig | None = None
     selected_squads: list[str]       = field(default_factory=list)
     selected_types:  list[str]       = field(default_factory=list)
@@ -79,11 +79,12 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
             "Upload a separate file per squad if needed — they will be merged automatically."
         ),
     )
-    rm_file = st.sidebar.file_uploader(
-        "Advanced Roadmaps CSV (optional)",
+    rm_files = st.sidebar.file_uploader(
+        "Advanced Roadmaps CSV(s) (optional)",
         type=["csv"],
         key="roadmaps_upload",
-        help="Upload the Advanced Roadmaps export to enable plan accuracy metrics.",
+        accept_multiple_files=True,
+        help="Upload one or more Advanced Roadmaps exports. Upload one per squad if needed — they will be merged automatically.",
     )
 
     # Save uploaded files to a temp location so core functions can read them
@@ -117,10 +118,22 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
     elif "snapshot_path" in st.session_state:
         state.snapshot_path = st.session_state["snapshot_path"]
 
-    if rm_file:
-        rm_path = tmp_dir / "roadmaps.csv"
-        rm_path.write_bytes(rm_file.read())
-        state.roadmaps_path = str(rm_path)
+    if isinstance(rm_files, list):
+        rm_files_list = rm_files
+    elif rm_files is not None:
+        rm_files_list = [rm_files]
+    else:
+        rm_files_list = []
+
+    if rm_files_list:
+        rm_paths = []
+        for i, f in enumerate(rm_files_list):
+            p = tmp_dir / f"roadmaps_{i}.csv"
+            p.write_bytes(f.read())
+            rm_paths.append(str(p))
+        state.roadmaps_path = rm_paths
+        if len(rm_files_list) > 1:
+            st.sidebar.caption(f"✅ {len(rm_files_list)} roadmap files loaded — will be merged.")
     elif "roadmaps_path" in st.session_state:
         state.roadmaps_path = st.session_state["roadmaps_path"]
 
