@@ -90,6 +90,12 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
         snap_path = tmp_dir / "snapshot.csv"
         snap_path.write_bytes(snap_file.read())
         state.snapshot_path = str(snap_path)
+        # Reset date pickers when a new CSV is uploaded so stale session-state
+        # values from a previous file don't silently filter out rows.
+        if st.session_state.get("_last_snap_name") != snap_file.name:
+            st.session_state.pop("date_from", None)
+            st.session_state.pop("date_to",   None)
+            st.session_state["_last_snap_name"] = snap_file.name
     elif "snapshot_path" in st.session_state:
         state.snapshot_path = st.session_state["snapshot_path"]
 
