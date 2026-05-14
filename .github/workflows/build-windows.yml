@@ -113,6 +113,13 @@ jobs:
           echo   Squad Flow Metrics  ^|  Loading, please wait...
           echo  =======================================================
           echo.
+
+          REM ── Silently remove Windows "downloaded from internet" zone tags ──
+          REM    This prevents Defender warnings on subsequent runs.
+          REM    Runs quietly — no UAC, no prompt, no visible output.
+          powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command ^
+            "Get-ChildItem -Path '%~dp0' -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue" >nul 2>&1
+
           echo   When you see "You can now view your Streamlit app"
           echo   open your browser and go to:
           echo.
@@ -151,20 +158,42 @@ jobs:
           SQUAD FLOW METRICS  —  Quick Start Guide
           ================================================================
 
+          *** IMPORTANT — DO THIS BEFORE ANYTHING ELSE ***
+          -------------------------------------------------
+          Windows marks downloaded files as "untrusted" which causes
+          security warnings. Remove those marks NOW before extracting:
+
+            1. RIGHT-CLICK the zip file you downloaded
+            2. Click "Properties"
+            3. At the bottom, tick the "Unblock" checkbox
+            4. Click OK
+            5. NOW extract the zip as normal
+
+          If you have already extracted without doing this, see the
+          "SOMETHING NOT WORKING?" section below.
+
+
           STARTING THE APP
           ----------------
-          1. Double-click:  "Run Squad Flow Metrics.bat"
+          1. Open the extracted "Squad-Flow-Metrics" folder.
 
-          2. A black window will appear — this is normal. It is the engine
+          2. Double-click:  "Run Squad Flow Metrics.bat"
+
+          3. If Windows SmartScreen appears:
+               - Click "More info"
+               - Click "Run anyway"
+             (This only happens the very first time.)
+
+          4. A black window will appear — this is normal. It is the engine
              running in the background. Do not close it while using the app.
 
-          3. If Windows asks for firewall permission, click "Allow".
+          5. If your firewall asks for permission, click "Allow".
 
-          4. Wait until you see this message in the black window:
+          6. Wait until you see this message in the black window:
                 "You can now view your Streamlit app in your browser"
              This may take 60-90 seconds on first launch — please be patient.
 
-          5. Open your browser (Edge or Chrome) and go to:
+          7. Open your browser (Edge or Chrome) and go to:
                 http://localhost:8501
 
           When you are finished, close the black window to stop the app.
@@ -185,10 +214,16 @@ jobs:
             Click "Load sample data" in the left-hand sidebar.
             Explore all features immediately with no Jira export needed.
 
-          Option B — Load your own Jira export
+          Option B — Load your own Jira export (one or more squads)
             1. In Jira: Issues > Search for issues >
                         Export > Export to CSV (all fields)
-            2. In the app: upload the file via the sidebar uploader.
+               Use a filter like:
+                 project = XX AND component = "Squad Name"
+                 AND issuetype in (Story, Bug, Task)
+                 AND created >= startOfMonth(-6)
+               (Do NOT filter by status=Done — that hides in-flight work)
+            2. In the app: upload the file(s) via the sidebar uploader.
+               You can upload one CSV per squad — they are merged automatically.
 
           Option C — Also upload an Advanced Roadmaps export
             Unlocks the Plan Accuracy and Sprint Slippage tabs.
@@ -196,11 +231,17 @@ jobs:
 
           SOMETHING NOT WORKING?
           ----------------------
-          - Windows may show a security warning the first time.
-            Click "More info" then "Run anyway".
-          - If your firewall asks for permission, click "Allow".
+          - "Windows protected your PC" / SmartScreen warning:
+              Click "More info" then "Run anyway". Safe to proceed.
+
+          - Still getting security warnings after clicking Run anyway?
+              You need to unblock the files. Open PowerShell and run:
+                Get-ChildItem -Path "C:\path\to\Squad-Flow-Metrics" -Recurse | Unblock-File
+              (Replace the path with where you extracted the folder.)
+
           - If the app does not start, check nothing else is using
             port 8501 (e.g. another copy of the app already running).
+
           - Try closing the black window and re-opening the .bat file.
 
 
@@ -244,12 +285,22 @@ jobs:
           body: |
             ## Squad Flow Metrics ${{ env.VERSION }} — Windows Package
 
+            ### ⚠️ Do this FIRST — before extracting the zip
+            Windows marks downloaded files as "untrusted" which causes Defender warnings.
+            Remove those marks before you extract:
+            1. **Right-click** `${{ env.ZIP_NAME }}`
+            2. Click **Properties**
+            3. Tick the **Unblock** checkbox at the bottom
+            4. Click **OK**
+            5. Now extract normally
+
             ### Installation (no Python required)
-            1. Download **${{ env.ZIP_NAME }}** below
+            1. Download **${{ env.ZIP_NAME }}** and unblock it (see above)
             2. Extract the zip to any folder (e.g. your Desktop)
-            3. Open the extracted folder
+            3. Open the **Squad-Flow-Metrics** folder
             4. Double-click **"Run Squad Flow Metrics.bat"**
-            5. Your browser opens automatically at http://localhost:8501
+            5. If SmartScreen appears, click **More info → Run anyway** (first run only)
+            6. Open your browser and go to **http://localhost:8501**
 
             See **START HERE.txt** inside the zip for full instructions.
 
