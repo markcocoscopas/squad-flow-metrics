@@ -159,10 +159,7 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
         selected_types = st.sidebar.multiselect(
             "Work-item type(s)",
             options=available_types,
-            default=[
-                t for t in available_types
-                if t in state.config.work_item_types_include
-            ] or available_types,
+            default=available_types,   # show everything in the data; user narrows down
             key="type_filter",
         )
 

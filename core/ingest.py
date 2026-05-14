@@ -349,27 +349,32 @@ def apply_filters(
         mask &= ~state_mask
 
     # ── 2. Filter by work-item type ───────────────────────────────────────────
-    if config.work_item_types_exclude:
-        type_excl_mask = df["type"].isin(config.work_item_types_exclude)
-        n = (mask & type_excl_mask).sum()
-        if n:
-            exclusion_reasons[f"Excluded item type ({', '.join(config.work_item_types_exclude)})"] = int(n)
-        mask &= ~type_excl_mask
-
-    if config.work_item_types_include and item_types is None:
-        # Only apply include filter if user hasn't overridden via sidebar
-        type_incl_mask = df["type"].isin(config.work_item_types_include)
-        n = (mask & ~type_incl_mask).sum()
-        if n:
-            exclusion_reasons["Not in include list"] = int(n)
-        mask &= type_incl_mask
-
+    # When the user has explicitly chosen types via the sidebar, their selection
+    # is the only type filter — config include/exclude lists are ignored so
+    # they can freely include Epics, Initiatives, etc. if they want.
+    # Config-based lists only act as a fallback when no UI selection is present.
     if item_types is not None and len(item_types) > 0:
         type_ui_mask = df["type"].isin(item_types)
         n = (mask & ~type_ui_mask).sum()
         if n:
-            exclusion_reasons[f"Not selected type ({', '.join(item_types)})"] = int(n)
+            excluded_types = sorted(set(df.loc[mask & ~type_ui_mask, "type"].tolist()))
+            exclusion_reasons[f"Not selected type ({', '.join(excluded_types)})"] = int(n)
         mask &= type_ui_mask
+    else:
+        # No UI selection — apply config-based exclude list then include list
+        if config.work_item_types_exclude:
+            type_excl_mask = df["type"].isin(config.work_item_types_exclude)
+            n = (mask & type_excl_mask).sum()
+            if n:
+                exclusion_reasons[f"Excluded item type ({', '.join(config.work_item_types_exclude)})"] = int(n)
+            mask &= ~type_excl_mask
+
+        if config.work_item_types_include:
+            type_incl_mask = df["type"].isin(config.work_item_types_include)
+            n = (mask & ~type_incl_mask).sum()
+            if n:
+                exclusion_reasons["Not in include list"] = int(n)
+            mask &= type_incl_mask
 
     # ── 3. Squad filter ───────────────────────────────────────────────────────
     if squads and len(squads) > 0:
