@@ -5,11 +5,9 @@ Typed result containers returned by core functions.  Using dataclasses
 (not pandas) keeps the interface stable regardless of pandas version.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -41,11 +39,11 @@ class McResult:
     """Result of a Monte Carlo simulation run."""
     mode: str                     # "how_many" | "when"
     n_simulations: int
-    confidence_levels: list[int]
+    confidence_levels: List[int]
     # mode="how_many": items completed at each confidence level
     # mode="when":     weeks to completion at each confidence level
-    percentile_values: dict[int, float]
-    raw_samples: list[int] = field(default_factory=list, compare=False)
+    percentile_values: Dict[int, float]
+    raw_samples: List[int] = field(default_factory=list, compare=False)
 
 
 @dataclass
@@ -75,10 +73,10 @@ class ConstraintReport:
     avg_blocked_days: float
 
     # Age-by-status distribution (state → list of ages in days)
-    age_by_status: dict[str, list[float]] = field(default_factory=dict)
+    age_by_status: Dict[str, List[float]] = field(default_factory=dict)
 
     # WIP breach records: list of dicts {state, wip_limit, current_wip}
-    wip_breaches: list[dict] = field(default_factory=list)
+    wip_breaches: List[Dict] = field(default_factory=list)
 
     # Candidate constraint state (highest median age among active states)
     candidate_constraint_state: str = ""
@@ -107,7 +105,7 @@ class DataQualityReport:
     rows_excluded: int
 
     # Reason → count
-    exclusion_reasons: dict[str, int] = field(default_factory=dict)
+    exclusion_reasons: Dict[str, int] = field(default_factory=dict)
 
     # Per-metric coverage
     has_resolved: int = 0       # rows with a valid Resolved date
