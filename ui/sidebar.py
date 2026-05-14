@@ -18,7 +18,7 @@ import streamlit as st
 import yaml
 
 from config.schema import AppConfig, load_config, load_config_from_dict
-from core.updater import check_for_update, download_and_apply, current_version
+from core.updater import check_for_update, current_version
 
 
 @dataclass
@@ -54,33 +54,15 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
         st.session_state["update_url"]        = release_url
         st.session_state["update_applied"]    = False
 
-    if st.session_state.get("update_applied"):
-        st.sidebar.error(
-            f"✅ Updated to {st.session_state['update_tag']}!\n\n"
-            "⚠️ **You must restart the app now:**\n\n"
-            "1. Close the black console window\n"
-            "2. Double-click **Run Squad Flow Metrics.bat** again\n\n"
-            "The new version will not be active until you restart."
-        )
-    elif st.session_state.get("update_available"):
+    if st.session_state.get("update_available"):
         latest_tag = st.session_state["update_tag"]
+        release_url = st.session_state.get("update_url", "https://github.com/markcocoscopas/squad-flow-metrics/releases/latest")
         st.sidebar.warning(
-            f"🆕 **Version {latest_tag} is available!**  \n"
-            "Click below to update — takes about 30 seconds."
+            f"🆕 **Version {latest_tag} is available!**  \n\n"
+            f"[⬇️ Download update]({release_url})  \n\n"
+            "Download the zip, extract it over your existing folder, "
+            "then close and reopen the app."
         )
-        if st.sidebar.button("⬇️ Update now", use_container_width=True, key="do_update"):
-            progress_placeholder = st.sidebar.empty()
-            with st.spinner("Updating…"):
-                success, msg = download_and_apply(
-                    progress_fn=lambda m: progress_placeholder.caption(m)
-                )
-            progress_placeholder.empty()
-            if success:
-                st.session_state["update_applied"] = True
-                st.session_state["update_available"] = False
-                st.rerun()
-            else:
-                st.sidebar.error(f"Update failed: {msg}")
 
     st.sidebar.markdown("---")
 

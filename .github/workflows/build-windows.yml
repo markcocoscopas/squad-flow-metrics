@@ -90,7 +90,7 @@ jobs:
       - name: Copy application files
         shell: pwsh
         run: |
-          $items = @('app.py', 'config', 'core', 'ui', 'reports', 'data', '.streamlit')
+          $items = @('app.py', 'config', 'core', 'ui', 'reports', 'data', '.streamlit', 'version.txt')
           foreach ($item in $items) {
             if (Test-Path $item -PathType Container) {
               Copy-Item -Recurse -Path $item -Destination "bundle\$item"
