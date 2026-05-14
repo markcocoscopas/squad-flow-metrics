@@ -78,6 +78,14 @@ jobs:
               --no-warn-script-location --quiet
           Write-Host "All dependencies installed."
 
+      # ── 6a. Stamp version.txt with the current build version ─────────────
+      - name: Stamp version.txt
+        shell: pwsh
+        run: |
+          $ver = $env:VERSION.TrimStart('v')
+          Set-Content "version.txt" $ver -Encoding UTF8 -NoNewline
+          Write-Host "version.txt set to: $ver"
+
       # ── 6. Copy application files into the bundle ─────────────────────────
       - name: Copy application files
         shell: pwsh
