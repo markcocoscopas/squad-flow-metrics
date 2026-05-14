@@ -66,12 +66,30 @@ st.set_page_config(
 
 # ── Session state helpers ─────────────────────────────────────────────────────
 def _load_data(
-    snapshot_path: str,
+    snapshot_path: "str | list[str]",
     roadmaps_path: str | None,
     config,
 ) -> tuple[pd.DataFrame, pd.DataFrame | None]:
-    """Load and merge CSVs, caching by file path."""
-    snap_df = load_snapshot(snapshot_path, config)
+    """Load and merge CSVs, caching by file path(s).
+
+    snapshot_path may be a single path string or a list of paths.
+    Multiple snapshot CSVs are concatenated and de-duplicated by Issue key.
+    """
+    paths = [snapshot_path] if isinstance(snapshot_path, str) else snapshot_path
+    frames = [load_snapshot(p, config) for p in paths]
+
+    if len(frames) == 1:
+        snap_df = frames[0]
+    else:
+        combined = pd.concat(frames, ignore_index=True)
+        # De-duplicate: keep the first occurrence of each Issue key
+        before = len(combined)
+        combined = combined.drop_duplicates(subset=["key"], keep="first")
+        dupes = before - len(combined)
+        if dupes:
+            log.info("  Dropped %d duplicate rows after merging %d snapshot files.", dupes, len(frames))
+        snap_df = combined
+        log.info("  Combined %d snapshot files → %d rows.", len(frames), len(snap_df))
 
     rm_df = None
     if roadmaps_path:
@@ -89,7 +107,9 @@ def _get_or_load(state: "SidebarState") -> tuple[pd.DataFrame | None, object | N
     Load data if the file paths or config have changed, otherwise reuse cached.
     Returns (merged_df, quality_report).
     """
-    cache_key = (state.snapshot_path, state.roadmaps_path)
+    # Normalise snapshot_path to a tuple so it's hashable for the cache key
+    snap_key = tuple(state.snapshot_path) if isinstance(state.snapshot_path, list) else (state.snapshot_path,)
+    cache_key = (snap_key, state.roadmaps_path)
 
     if (
         state.refreshed

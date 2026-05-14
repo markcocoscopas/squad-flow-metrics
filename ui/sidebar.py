@@ -23,8 +23,8 @@ from core.updater import check_for_update, current_version
 
 @dataclass
 class SidebarState:
-    snapshot_path:  str | None       = None
-    roadmaps_path:  str | None       = None
+    snapshot_path:  str | list | None = None   # str (single) or list[str] (multi)
+    roadmaps_path:  str | None        = None
     config:         AppConfig | None = None
     selected_squads: list[str]       = field(default_factory=list)
     selected_types:  list[str]       = field(default_factory=list)
@@ -69,11 +69,15 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
     # ── Data source ───────────────────────────────────────────────────────────
     st.sidebar.subheader("📂 Data Source")
 
-    snap_file = st.sidebar.file_uploader(
-        "Jira snapshot CSV",
+    snap_files = st.sidebar.file_uploader(
+        "Jira snapshot CSV(s)",
         type=["csv"],
         key="snapshot_upload",
-        help="Upload the 'Created vs Resolved' Jira export.",
+        accept_multiple_files=True,
+        help=(
+            "Upload one or more 'Created vs Resolved' Jira exports. "
+            "Upload a separate file per squad if needed — they will be merged automatically."
+        ),
     )
     rm_file = st.sidebar.file_uploader(
         "Advanced Roadmaps CSV (optional)",
@@ -86,16 +90,30 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
     tmp_dir = Path(st.session_state.get("tmp_dir", "/tmp/squad_flow"))
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    if snap_file:
-        snap_path = tmp_dir / "snapshot.csv"
-        snap_path.write_bytes(snap_file.read())
-        state.snapshot_path = str(snap_path)
-        # Reset date pickers when a new CSV is uploaded so stale session-state
-        # values from a previous file don't silently filter out rows.
-        if st.session_state.get("_last_snap_name") != snap_file.name:
+    # Normalise to list regardless of whether 0, 1 or many files were uploaded
+    if isinstance(snap_files, list):
+        snap_files_list = snap_files
+    elif snap_files is not None:
+        snap_files_list = [snap_files]
+    else:
+        snap_files_list = []
+
+    if snap_files_list:
+        snap_paths = []
+        for i, f in enumerate(snap_files_list):
+            p = tmp_dir / f"snapshot_{i}.csv"
+            p.write_bytes(f.read())
+            snap_paths.append(str(p))
+        state.snapshot_path = snap_paths  # list of paths
+        # Reset date pickers when the set of uploaded files changes so stale
+        # session-state values from a previous upload don't silently hide rows.
+        new_names = tuple(sorted(f.name for f in snap_files_list))
+        if st.session_state.get("_last_snap_names") != new_names:
             st.session_state.pop("date_from", None)
             st.session_state.pop("date_to",   None)
-            st.session_state["_last_snap_name"] = snap_file.name
+            st.session_state["_last_snap_names"] = new_names
+        if len(snap_files_list) > 1:
+            st.sidebar.caption(f"✅ {len(snap_files_list)} files loaded — squads will be merged.")
     elif "snapshot_path" in st.session_state:
         state.snapshot_path = st.session_state["snapshot_path"]
 
