@@ -142,19 +142,19 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
             key="type_filter",
         )
 
-        min_date = df["created"].min()
-        max_date = df["created"].max()
-        if pd.notna(min_date) and pd.notna(max_date):
+        min_date  = df["created"].min()
+        today     = pd.Timestamp.now().normalize()
+        if pd.notna(min_date):
             col1, col2 = st.sidebar.columns(2)
             with col1:
                 date_from = st.date_input(
                     "From", value=min_date.date(), min_value=min_date.date(),
-                    max_value=max_date.date(), key="date_from"
+                    max_value=today.date(), key="date_from"
                 )
             with col2:
                 date_to = st.date_input(
-                    "To", value=max_date.date(), min_value=min_date.date(),
-                    max_value=max_date.date(), key="date_to"
+                    "To", value=today.date(), min_value=min_date.date(),
+                    max_value=today.date(), key="date_to"
                 )
             state.date_from = pd.Timestamp(date_from)
             state.date_to   = pd.Timestamp(date_to)
