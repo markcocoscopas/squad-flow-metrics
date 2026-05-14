@@ -55,9 +55,12 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
         st.session_state["update_applied"]    = False
 
     if st.session_state.get("update_applied"):
-        st.sidebar.success(
-            f"✅ Updated to {st.session_state['update_tag']}! "
-            "Please **close and reopen** the app to use the new version."
+        st.sidebar.error(
+            f"✅ Updated to {st.session_state['update_tag']}!\n\n"
+            "⚠️ **You must restart the app now:**\n\n"
+            "1. Close the black console window\n"
+            "2. Double-click **Run Squad Flow Metrics.bat** again\n\n"
+            "The new version will not be active until you restart."
         )
     elif st.session_state.get("update_available"):
         latest_tag = st.session_state["update_tag"]

@@ -202,12 +202,18 @@ jobs:
           Write-Host "Instructions created."
 
       # ── 9. Zip everything up ──────────────────────────────────────────────
+      #    Bundle is wrapped in a fixed "Squad-Flow-Metrics" subfolder so
+      #    the extracted folder name never changes between versions.
+      #    Users can update in-place without renaming anything.
       - name: Create zip archive
         shell: pwsh
         run: |
           $zipName = "Squad-Flow-Metrics-$env:VERSION-Windows.zip"
           Write-Host "Creating $zipName ..."
-          Compress-Archive -Path "bundle\*" -DestinationPath $zipName -CompressionLevel Optimal
+          # Wrap bundle contents in a fixed top-level folder
+          New-Item -ItemType Directory -Path "zip-root\Squad-Flow-Metrics" | Out-Null
+          Copy-Item -Recurse -Path "bundle\*" -Destination "zip-root\Squad-Flow-Metrics"
+          Compress-Archive -Path "zip-root\*" -DestinationPath $zipName -CompressionLevel Optimal
           $sizeMB = [math]::Round((Get-Item $zipName).Length / 1MB, 1)
           Write-Host "Done: $zipName  ($sizeMB MB)"
           echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
