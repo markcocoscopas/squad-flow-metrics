@@ -51,7 +51,7 @@ work_item_types:
 # residency once changelog data is available.
 workflow:
   states:
-    - {name: "Funnel",       category: "queue",    start: false, end: false}
+    - {name: "Funnel",       category: "excluded", start: false, end: false}  # backlog/waiting area — excluded from WIP and constraint analysis
     - {name: "To Do",        category: "queue",    start: false, end: false}
     - {name: "In Progress",  category: "active",   start: true,  end: false}
     - {name: "Implementing", category: "active",   start: false, end: false}
