@@ -63,14 +63,19 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
             summary = plan_accuracy_summary(records)
 
             c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("Items analysed",  summary.get("n_items", 0))
+            c1.metric("Items analysed", summary.get("n_items", 0))
             c2.metric("On time (±3d)",
-                      f"{summary.get('n_on_time', 0)} ({summary.get('pct_on_time', 0)}%)")
-            c3.metric("Late",            summary.get("n_late", 0))
-            c4.metric("Early",           summary.get("n_early", 0))
+                      f"{summary.get('pct_on_time', 0)}%",
+                      help=f"{summary.get('n_on_time', 0)} items delivered within ±3 days of target")
+            c3.metric("Late",
+                      summary.get("n_late", 0),
+                      help="Delivered more than 3 days after target end date")
+            c4.metric("Early",
+                      summary.get("n_early", 0),
+                      help="Delivered more than 3 days before target end date")
             c5.metric("Median slip",
                       f"{summary.get('median_slip_days', 0):+.0f} d",
-                      help="Positive = late on average")
+                      help="Positive = late on average, negative = early on average")
 
             st.divider()
 
@@ -125,7 +130,8 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
             pa_rows.append({
                 "Squad":           squad,
                 "Items":           s.get("n_items", 0),
-                "On time (±3d)":   f"{s.get('n_on_time', 0)} ({s.get('pct_on_time', 0)}%)",
+                "On time %":       f"{s.get('pct_on_time', 0)}%",
+                "On time (n)":     s.get("n_on_time", 0),
                 "Late":            s.get("n_late", 0),
                 "Early":           s.get("n_early", 0),
                 "Median slip (d)": f"{s.get('median_slip_days', 0):+.0f}",
