@@ -173,6 +173,13 @@ jobs:
           "SOMETHING NOT WORKING?" section below.
 
 
+          UPGRADING FROM A PREVIOUS VERSION?
+          ------------------------------------
+          Close the black command window BEFORE running the installer.
+          If the app is still running, the installer cannot overwrite the
+          files and the upgrade will be incomplete.
+
+
           STARTING THE APP
           ----------------
           1. Open the extracted "Squad-Flow-Metrics" folder.
@@ -363,6 +370,11 @@ jobs:
             ## Squad Flow Metrics ${{ env.VERSION }} — Windows
 
             ### ✅ Recommended: Installer (easiest, no Defender hassle)
+
+            **Upgrading from a previous version? Close the app first.**
+            Close the black command window before running the installer,
+            otherwise the files will be locked and the installer cannot overwrite them.
+
             1. Download **${{ env.SETUP_NAME }}** below
             2. If SmartScreen appears, click **More info → Run anyway** (installer is unsigned but safe — this happens once only)
             3. Click through the short installer wizard (no admin rights needed)
