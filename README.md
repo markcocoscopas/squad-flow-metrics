@@ -36,8 +36,9 @@ throughput and cycle time, not story-point velocity.
 
 > **Just want to run it on Windows?**
 > Go to the [**Releases page**](https://github.com/markcocoscopas/squad-flow-metrics/releases/latest),
-> download the `.zip` file, extract it anywhere, and double-click
-> **"Run Squad Flow Metrics.bat"**. That's it — no Python, no admin rights, no setup.
+> download the **Setup.exe** installer, and run it. No Python, no admin rights, no setup.
+> Launch from the Start Menu shortcut afterwards.
+> Close the app (black command window) before installing an upgrade.
 
 ---
 
@@ -110,12 +111,35 @@ explored immediately.
 
 ### Option 2 — Your Jira export
 
-1. In Jira, go to **Issues → Search for issues → Export → Export to CSV (all fields)**
-   — the standard *Created vs Resolved* snapshot export. **Do not filter to resolved
-   items only** — export all statuses so in-flight items appear in WIP and Ageing WIP tabs.
-2. *(Optional)* Export the **Advanced Roadmaps** plan view to unlock Plan Accuracy
-   and Sprint Slippage tabs.
-3. Upload both files via the sidebar uploaders.
+1. In Jira, go to **Issues → Search for issues → Export → Export to CSV (all fields)**.
+
+2. Use a JQL filter that includes **both in-flight and completed** items — do not
+   filter by `status = Done` or add a `Resolved >=` clause, or your WIP and Ageing
+   WIP tabs will be empty. A good starting point:
+
+   ```
+   project = "YOUR_PROJECT"
+   AND component = "Your Squad Name"
+   AND issuetype in (Story, Bug, Task, Spike, "Sub-task")
+   AND created >= startOfMonth(-6)
+   ORDER BY created DESC
+   ```
+
+   For **multiple squads**, either use a broader component filter or export one CSV
+   per squad and upload them all together — the app merges them automatically.
+
+   ```
+   project = "YOUR_PROJECT"
+   AND component in ("Squad A", "Squad B", "Squad C")
+   AND issuetype in (Story, Bug, Task, Spike, "Sub-task")
+   AND created >= startOfMonth(-6)
+   ORDER BY created DESC
+   ```
+
+3. *(Optional)* Export the **Advanced Roadmaps** plan view to unlock Plan Accuracy
+   and Sprint Slippage tabs. One file per squad is fine — upload them all together.
+
+4. Upload your files via the sidebar uploaders.
 
 **The one thing to check:** the app uses the **Component/s** field as the squad
 identifier. Make sure your issues have Component/s populated. If your squad name
@@ -251,6 +275,13 @@ pytest tests/ --cov=core --cov-report=term-missing   # with coverage
 
 ## Changelog
 
+### v1.2.1
+- **Plan Accuracy tab** — now has **Overall** and **By Squad** sub-tabs. The By Squad view shows a summary table and small-multiples scatter chart per squad side by side, including sprint slippage per squad
+- **Multi-file upload** — both snapshot and roadmaps uploaders now accept multiple CSVs (one per squad). Files are merged and de-duplicated automatically
+- **Filters** — squad and work-item type filters now default to everything in the loaded data. Explicit type selection bypasses config include/exclude lists entirely
+- **Windows installer** — setup `.exe` replaces the zip as the recommended download. Installs to user profile (no admin needed), creates Start Menu shortcut, never triggers Defender after initial install
+- **Date filter fix** — uploading a new CSV now resets the date range so stale session values can't hide rows
+
 ### v1.0.2
 - **Export tab** — download filtered data as CSV, full self-contained HTML report (interactive charts, no internet required), or individual chart PNGs via Plotly's built-in camera icon
 - **Constraints tab** — added plain-English Theory of Constraints explainer, box plot reading guide, and contextual captions on every section so the tab is useful without prior knowledge
@@ -279,8 +310,8 @@ git push origin v1.0.2
 That's it. GitHub Actions will automatically:
 1. Spin up a Windows build server
 2. Bundle the app with a self-contained Python (no install needed)
-3. Create a zip (~150–250 MB)
-4. Attach it to the Releases page with download instructions
+3. Build a **Setup.exe installer** and a portable zip
+4. Attach both to the Releases page with download instructions
 
 The build takes about **5–8 minutes**. You can watch it under the
 **Actions** tab on GitHub. When it turns green, the zip is ready to share.
