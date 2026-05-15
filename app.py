@@ -179,6 +179,26 @@ def main() -> None:
             _show_welcome()
         return
 
+    # ── Squad view selector ───────────────────────────────────────────────────
+    # When multiple squads are loaded, show a quick-select bar above the tabs.
+    # The Compare Squads tab always receives the full dataset regardless.
+    squads_loaded = sorted(filtered_df["squad"].dropna().unique().tolist())
+    if len(squads_loaded) > 1:
+        view_options = ["📊 All Squads"] + squads_loaded
+        selected_view = st.radio(
+            "Squad view",
+            options=view_options,
+            horizontal=True,
+            key="squad_view",
+            label_visibility="collapsed",
+        )
+        if selected_view != "📊 All Squads":
+            display_df = filtered_df[filtered_df["squad"] == selected_view].copy()
+        else:
+            display_df = filtered_df
+    else:
+        display_df = filtered_df
+
     # ── Tabs ──────────────────────────────────────────────────────────────────
     tabs = st.tabs([
         "📊 Overview",
@@ -194,29 +214,29 @@ def main() -> None:
     ])
 
     with tabs[0]:
-        tab_overview.render(filtered_df, config)
+        tab_overview.render(display_df, config)
     with tabs[1]:
-        tab_cycle_time.render(filtered_df, config)
+        tab_cycle_time.render(display_df, config)
     with tabs[2]:
-        tab_throughput.render(filtered_df, config)
+        tab_throughput.render(display_df, config)
     with tabs[3]:
-        tab_ageing.render(filtered_df, config)
+        tab_ageing.render(display_df, config)
     with tabs[4]:
         tab_forecasts.render(
-            filtered_df, config,
+            display_df, config,
             n_sims=sidebar_state.n_sims,
             mc_window_weeks=sidebar_state.mc_window_weeks,
         )
     with tabs[5]:
-        tab_constraints.render(filtered_df, config)
+        tab_constraints.render(display_df, config)
     with tabs[6]:
-        tab_plan.render(filtered_df, config)
+        tab_plan.render(display_df, config)
     with tabs[7]:
-        tab_compare.render(filtered_df, config)
+        tab_compare.render(filtered_df, config)   # always full dataset — needs all squads
     with tabs[8]:
         tab_quality.render(quality_report, config)
     with tabs[9]:
-        tab_export.render(filtered_df, config, quality_report)
+        tab_export.render(display_df, config, quality_report)
 
 
 def _show_welcome() -> None:
