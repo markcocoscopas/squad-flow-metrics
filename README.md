@@ -150,15 +150,63 @@ lives in a different field (e.g. a custom Team field or a label), update
 
 ---
 
-## Column mapping
+## Custom configuration
 
 The default config (`config/default_config.yaml`) is pre-set for the standard
-Jira export format used by this project. If your Jira instance uses different
-field names, create a custom config YAML and upload it via the sidebar.
+Jira export format. If your Jira instance uses different field names, workflow
+states, or WIP limits, create a custom YAML and upload it via the **⚙️ Configuration**
+uploader in the sidebar. You only need to include the sections you want to override —
+everything else falls back to the defaults.
 
-Key mappings:
+### Common customisations
+
+#### 1 — Squad lives in a different field
 
 ```yaml
+columns:
+  id:       "Issue key"
+  title:    "Summary"
+  type:     "Issue Type"
+  status:   "Status"
+  created:  "Created"
+  resolved: "Resolved"
+  squad:    "Custom field (Team)"   # ← change to whatever field holds your squad name
+```
+
+#### 2 — Different workflow states (including backlog exclusion)
+
+States with `category: "excluded"` are filtered out of WIP, Ageing WIP, and
+Constraints entirely. Use this for backlog/waiting-area states that aren't truly
+in-flight. `category: "queue"` keeps them visible in WIP counts.
+
+```yaml
+workflow:
+  states:
+    - {name: "Backlog",      category: "excluded", start: false, end: false}  # waiting area
+    - {name: "Funnel",       category: "excluded", start: false, end: false}  # waiting area
+    - {name: "To Do",        category: "queue",    start: false, end: false}
+    - {name: "In Progress",  category: "active",   start: true,  end: false}  # cycle time starts here
+    - {name: "In Review",    category: "active",   start: false, end: false}
+    - {name: "Blocked",      category: "queue",    start: false, end: false}
+    - {name: "Done",         category: "done",     start: false, end: true}   # cycle time ends here
+    - {name: "Cancelled",    category: "excluded", start: false, end: false}
+```
+
+#### 3 — WIP limits
+
+```yaml
+wip_limits:
+  "In Progress": 4
+  "In Review":   3
+  "Blocked":     1
+```
+
+#### 4 — Full example (copy, edit, and upload via the sidebar)
+
+```yaml
+# my-squad-config.yaml
+# Upload via: sidebar ▸ ⚙️ Configuration ▸ Custom config YAML
+
 columns:
   id:           "Issue key"
   title:        "Summary"
@@ -166,7 +214,39 @@ columns:
   status:       "Status"
   created:      "Created"
   resolved:     "Resolved"
-  squad:        "Component/s"   # ← change this if your squad is in a different field
+  squad:        "Component/s"          # or "Custom field (Team)" etc.
+  story_points: "Custom field (Story Points)"
+  blocked:      "Custom field (Blocked)"
+  flagged:      "Custom field (Flagged)"
+  sprint:       "Sprint"
+
+date_format: "%d/%b/%y %I:%M %p"      # e.g. 08/May/26 9:21 AM — adjust if your dates look different
+
+work_item_types:
+  include: [Story, Bug, Task, Spike, Sub-task]
+  exclude: [Epic, Initiative, Theme]
+
+workflow:
+  states:
+    - {name: "Backlog",      category: "excluded", start: false, end: false}
+    - {name: "To Do",        category: "queue",    start: false, end: false}
+    - {name: "In Progress",  category: "active",   start: true,  end: false}
+    - {name: "In Review",    category: "active",   start: false, end: false}
+    - {name: "Blocked",      category: "queue",    start: false, end: false}
+    - {name: "Done",         category: "done",     start: false, end: true}
+    - {name: "Cancelled",    category: "excluded", start: false, end: false}
+
+wip_limits:
+  "In Progress": 4
+  "In Review":   3
+  "Blocked":     1
+
+squad_capacity_pct: 80
+
+monte_carlo:
+  default_window_weeks: 12
+  n_simulations: 10_000
+  confidence_levels: [50, 70, 85, 95]
 ```
 
 ---
