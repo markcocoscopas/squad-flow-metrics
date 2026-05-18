@@ -90,12 +90,18 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
             st.subheader("Sprint Slippage")
             slip = sprint_slippage_summary(df)
             if slip:
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Items with sprint data", slip.get("n_items_with_sprint_data", 0))
-                c2.metric("No slip",
-                          f"{slip.get('n_no_slip', 0)} ({slip.get('pct_no_slip', 0)}%)")
-                c3.metric("Slipped 1 sprint",       slip.get("n_slipped_1", 0))
-                c4.metric("Slipped 2+ sprints",     slip.get("n_slipped_2plus", 0))
+                if not slip.get("data_reliable", True):
+                    st.warning(
+                        "⚠️ **Sprint slippage data is unreliable for this dataset.**\n\n"
+                        + slip.get("data_warning", "")
+                    )
+                else:
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("Items with sprint data", slip.get("n_items_with_sprint_data", 0))
+                    c2.metric("No slip",
+                              f"{slip.get('n_no_slip', 0)} ({slip.get('pct_no_slip', 0)}%)")
+                    c3.metric("Slipped 1 sprint",       slip.get("n_slipped_1", 0))
+                    c4.metric("Slipped 2+ sprints",     slip.get("n_slipped_2plus", 0))
             else:
                 st.info("Sprint data not available or insufficient for slippage analysis.")
 
@@ -208,10 +214,14 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
         st.divider()
         st.subheader("Sprint Slippage by Squad")
         slip_rows = []
+        unreliable_squads = []
         for squad in squads:
             sdf  = df[df["squad"] == squad]
             slip = sprint_slippage_summary(sdf)
             if not slip:
+                continue
+            if not slip.get("data_reliable", True):
+                unreliable_squads.append(squad)
                 continue
             slip_rows.append({
                 "Squad":              squad,
@@ -221,6 +231,14 @@ def render(df: pd.DataFrame, config: AppConfig) -> None:
                 "Slipped 2+ sprints": slip.get("n_slipped_2plus", 0),
                 "Slip %":             f"{slip.get('pct_slipped', 0)}%",
             })
+        if unreliable_squads:
+            st.warning(
+                "⚠️ **Sprint slippage data is unreliable** for: "
+                + ", ".join(f"**{s}**" for s in unreliable_squads)
+                + ". Jira appears to have replaced the Sprint field rather than keeping "
+                "history — so every item shows the same planned and delivered sprint. "
+                "Reliable slippage data requires the Jira API changelog."
+            )
         if slip_rows:
             st.dataframe(pd.DataFrame(slip_rows), use_container_width=True, hide_index=True)
         else:

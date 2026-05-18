@@ -355,6 +355,9 @@ pytest tests/ --cov=core --cov-report=term-missing   # with coverage
 
 ## Changelog
 
+### v1.2.6
+- **Sprint slippage reliability detection** — when Jira replaces the Sprint field rather than keeping compound sprint history, the slippage analysis now detects this (≥ 80% of items with identical planned/delivered sprint) and shows a plain-English warning explaining why the data is unreliable, instead of silently displaying a misleading "100% no-slip" result. The warning includes a note that reliable slippage data requires the Jira API changelog.
+
 ### v1.2.1
 - **Plan Accuracy tab** — now has **Overall** and **By Squad** sub-tabs. The By Squad view shows a summary table and small-multiples scatter chart per squad side by side, including sprint slippage per squad
 - **Multi-file upload** — both snapshot and roadmaps uploaders now accept multiple CSVs (one per squad). Files are merged and de-duplicated automatically

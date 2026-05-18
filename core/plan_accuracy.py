@@ -170,6 +170,37 @@ def sprint_slippage_summary(df: pd.DataFrame) -> dict:
     pct_no_slip = round(100 * n_no_slip / max(n_total, 1), 1)
     pct_slipped = round(100 * (n_slip_1 + n_slip_2p) / max(n_total, 1), 1)
 
+    # ── Reliability check ────────────────────────────────────────────────────
+    # Jira *replaces* the Sprint field when an item moves sprints (rather than
+    # appending to a compound "Sprint1 + Sprint2" value).  When this happens,
+    # sprint_first == sprint_last_completed for every item, so _slip is always 0
+    # and the 100% no-slip result is an artefact of missing history, not reality.
+    #
+    # Heuristic: if ≥ 80 % of valid items have _slip == 0 *and* their raw
+    # sprint_first exactly equals sprint_last_completed, the data is likely
+    # unreliable rather than genuinely slip-free.
+    same_sprint_mask = (
+        valid["sprint_first"].astype(str).str.strip()
+        == valid["sprint_last_completed"].astype(str).str.strip()
+    )
+    pct_same = same_sprint_mask.sum() / max(n_total, 1)
+    data_reliable = not (pct_same >= 0.80 and n_no_slip / max(n_total, 1) >= 0.80)
+
+    data_warning = (
+        "Jira appears to have **replaced** the Sprint field when tickets moved sprints "
+        "rather than keeping a history of all sprints. Because of this, every item shows "
+        "the same 'planned' and 'delivered' sprint, making slippage appear to be 0% — "
+        "which is almost certainly wrong.\n\n"
+        "**Workaround:** to get reliable slippage data you need Jira's full issue changelog "
+        "(available via the Jira API). The CSV export only contains the *current* sprint value."
+        if not data_reliable else ""
+    )
+
+    log.debug(
+        "sprint_slippage_summary: n=%d, pct_same_sprint=%.1f%%, data_reliable=%s",
+        n_total, 100 * pct_same, data_reliable,
+    )
+
     return {
         "n_items_with_sprint_data": n_total,
         "n_no_slip":                n_no_slip,
@@ -178,4 +209,6 @@ def sprint_slippage_summary(df: pd.DataFrame) -> dict:
         "n_delivered_early":        n_early,
         "pct_no_slip":              pct_no_slip,
         "pct_slipped":              pct_slipped,
+        "data_reliable":            data_reliable,
+        "data_warning":             data_warning,
     }
