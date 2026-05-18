@@ -126,7 +126,8 @@ jobs:
           echo       http://localhost:8501
           echo.
           echo   - To STOP the app, close this window.
-          echo   - First launch may take 60-90 seconds - please wait.
+          echo   - FIRST LAUNCH: Windows Defender scans can take up to 15 minutes.
+          echo     Do NOT close this window - it will get there. Fast after that.
           echo.
           echo  =======================================================
           echo.
@@ -198,7 +199,12 @@ jobs:
 
           6. Wait until you see this message in the black window:
                 "You can now view your Streamlit app in your browser"
-             This may take 60-90 seconds on first launch — please be patient.
+
+             *** IMPORTANT — FIRST LAUNCH CAN TAKE UP TO 15 MINUTES ***
+             Windows Defender scans all the bundled files the very first
+             time they run. This is a one-time delay only. Do NOT close
+             the black window — it will get there. Every launch after the
+             first one is fast (under 30 seconds).
 
           7. Open your browser (Edge or Chrome) and go to:
                 http://localhost:8501

@@ -70,6 +70,12 @@ The launcher creates a virtual environment, installs all dependencies, and
 opens the app at **http://localhost:8501**. On first run this takes about
 30–60 seconds; subsequent launches are instant.
 
+> **Windows — first launch after installing:** Windows Defender scans the
+> bundled Python files the very first time they run. This can take **up to
+> 10–15 minutes** before the browser page loads. This is a one-time delay —
+> every subsequent launch is fast. Do not close the black command window
+> while you are waiting.
+
 > **PDF export on Windows:** the HTML report exports fine on all platforms.
 > PDF export additionally needs [WeasyPrint system libraries (GTK3)](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html),
 > which are complex to install on Windows. HTML is the recommended format
