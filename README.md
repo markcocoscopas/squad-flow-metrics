@@ -361,6 +361,9 @@ pytest tests/ --cov=core --cov-report=term-missing   # with coverage
 
 ## Changelog
 
+### v1.2.8
+- **One-click in-app upgrade** — when a newer version is available, the sidebar shows an **⬆️ Upgrade now** button. Clicking it downloads only the source files (~1 MB) directly from GitHub, applies them in place, and prompts you to restart. The bundled Python runtime and dependencies are never re-downloaded, so upgrades are fast regardless of connection speed.
+
 ### v1.2.7
 - **Sprint slippage fix (root cause)** — Jira exports each sprint an item was in as a separate column (`Sprint`, `Sprint.1`, `Sprint.2` …). The CSV loader was discarding all but the last one, so `sprint_first` always equalled `sprint_last_completed` and slippage appeared to be 0%. All sprint columns are now joined together so the full history is preserved and slippage is calculated correctly.
 

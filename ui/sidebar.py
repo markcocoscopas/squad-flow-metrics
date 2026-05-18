@@ -18,7 +18,7 @@ import streamlit as st
 import yaml
 
 from config.schema import AppConfig, load_config, load_config_from_dict
-from core.updater import check_for_update, current_version
+from core.updater import check_for_update, current_version, download_and_apply
 
 
 @dataclass
@@ -54,15 +54,27 @@ def render_sidebar(df: pd.DataFrame | None = None) -> SidebarState:
         st.session_state["update_url"]        = release_url
         st.session_state["update_applied"]    = False
 
-    if st.session_state.get("update_available"):
-        latest_tag = st.session_state["update_tag"]
-        release_url = st.session_state.get("update_url", "https://github.com/markcocoscopas/squad-flow-metrics/releases/latest")
-        st.sidebar.warning(
-            f"🆕 **Version {latest_tag} is available!**  \n\n"
-            f"[⬇️ Download update]({release_url})  \n\n"
-            "Download the zip, extract it over your existing folder, "
-            "then close and reopen the app."
+    if st.session_state.get("update_applied"):
+        st.sidebar.success(
+            "✅ **Update applied!**  \n"
+            "Close and reopen the app to start using the new version."
         )
+    elif st.session_state.get("update_available"):
+        latest_tag  = st.session_state["update_tag"]
+        st.sidebar.warning(f"🆕 **Version {latest_tag} available**")
+        if st.sidebar.button("⬆️ Upgrade now", use_container_width=True):
+            progress_placeholder = st.sidebar.empty()
+            def _progress(msg):
+                progress_placeholder.caption(f"⏳ {msg}")
+            with st.spinner(f"Upgrading to {latest_tag}…"):
+                ok, msg = download_and_apply(progress_fn=_progress)
+            progress_placeholder.empty()
+            if ok:
+                st.session_state["update_applied"]   = True
+                st.session_state["update_available"] = False
+                st.rerun()
+            else:
+                st.sidebar.error(f"Upgrade failed: {msg}")
 
     st.sidebar.markdown("---")
 
