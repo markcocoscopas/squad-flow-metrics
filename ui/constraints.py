@@ -70,13 +70,27 @@ Fixing the constraint — not the fastest step — is what increases throughput.
 
     # ── Candidate constraint ──────────────────────────────────────────────────
     if cr.candidate_constraint_state:
-        st.warning(
-            f"🔍 **Candidate constraint: {cr.candidate_constraint_state}** — "
-            f"this state has the highest median in-flight item age at "
-            f"**{cr.candidate_constraint_median_days:.1f} days**. "
-            f"Work is accumulating here more than anywhere else. "
-            f"This is where to focus improvement effort first."
-        )
+        state      = cr.candidate_constraint_state
+        median_age = cr.candidate_constraint_median_days
+        n_items    = len(cr.age_by_status.get(state, []))
+
+        if n_items < 3:
+            # Too few items to be statistically meaningful — flag as anecdotal
+            st.info(
+                f"🔍 **Candidate constraint: {state}** — "
+                f"median age **{median_age:.1f} days** "
+                f"(but only **n={n_items}** item{'s' if n_items != 1 else ''} in this state). "
+                f"With so few items this is anecdotal, not a systemic signal. "
+                f"Monitor over time before acting."
+            )
+        else:
+            st.warning(
+                f"🔍 **Candidate constraint: {state}** — "
+                f"this state has the highest median in-flight item age at "
+                f"**{median_age:.1f} days** (n={n_items} items). "
+                f"Work is accumulating here more than anywhere else. "
+                f"This is where to focus improvement effort first."
+            )
     else:
         st.info("Not enough in-flight data to identify a candidate constraint.")
 

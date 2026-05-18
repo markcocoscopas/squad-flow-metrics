@@ -370,9 +370,11 @@ def age_by_status_box(age_by_status: dict[str, list[float]]) -> go.Figure:
         if ages:
             n = len(ages)
             colour = _palette_colour(i)
+            # Include item count in the box label so sparse states are obvious
+            label = f"{state}<br><sub>n={n}</sub>"
             fig.add_trace(go.Box(
                 y=ages,
-                name=state,
+                name=label,
                 marker_color=colour,
                 boxmean=True,
                 # Always show individual points so sparse states are readable
