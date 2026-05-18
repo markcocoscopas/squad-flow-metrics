@@ -320,7 +320,7 @@ def ageing_items(
             p50_reference=p50,
             p85_reference=p85,
             p95_reference=p95,
-            is_blocked=bool(row.get("is_blocked", False)),
+            is_blocked=bool(row.get("is_blocked", False)) or str(row.get("status", "")).lower() == "blocked",
             is_flagged=bool(row.get("is_flagged", False)),
         ))
 

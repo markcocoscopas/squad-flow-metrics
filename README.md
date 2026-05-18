@@ -361,6 +361,9 @@ pytest tests/ --cov=core --cov-report=term-missing   # with coverage
 
 ## Changelog
 
+### v1.2.9
+- **Blocked count fix (Overview)** — items in the **Blocked workflow state** were not being counted as blocked in the Overview and Ageing WIP tabs unless the custom Blocked field was also set. The `is_blocked` flag now reflects both sources (custom field OR workflow state = Blocked), consistent with the Constraints tab.
+
 ### v1.2.8
 - **One-click in-app upgrade** — when a newer version is available, the sidebar shows an **⬆️ Upgrade now** button. Clicking it downloads only the source files (~1 MB) directly from GitHub, applies them in place, and prompts you to restart. The bundled Python runtime and dependencies are never re-downloaded, so upgrades are fast regardless of connection speed.
 
