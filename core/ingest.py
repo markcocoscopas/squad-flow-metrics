@@ -96,12 +96,16 @@ def _deduplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
                 axis=1,
             )
         elif "sprint" in base_name.lower():
-            # Last non-null wins (most recently assigned sprint)
+            # Join ALL non-null sprint columns with " + " so that sprint history
+            # is preserved.  Jira emits one column per sprint the item appeared in
+            # (Sprint, Sprint.1, Sprint.2 …).  Taking only the last value would
+            # discard the earlier sprints and break slippage detection.
             merged = result[dup_cols].apply(
-                lambda row: next(
-                    (v for v in reversed(row.dropna().tolist()) if str(v).strip()),
-                    None,
-                ),
+                lambda row: " + ".join(
+                    str(v).strip()
+                    for v in row.dropna().tolist()
+                    if str(v).strip()
+                ) or None,
                 axis=1,
             )
         else:

@@ -355,6 +355,9 @@ pytest tests/ --cov=core --cov-report=term-missing   # with coverage
 
 ## Changelog
 
+### v1.2.7
+- **Sprint slippage fix (root cause)** — Jira exports each sprint an item was in as a separate column (`Sprint`, `Sprint.1`, `Sprint.2` …). The CSV loader was discarding all but the last one, so `sprint_first` always equalled `sprint_last_completed` and slippage appeared to be 0%. All sprint columns are now joined together so the full history is preserved and slippage is calculated correctly.
+
 ### v1.2.6
 - **Sprint slippage reliability detection** — when Jira replaces the Sprint field rather than keeping compound sprint history, the slippage analysis now detects this (≥ 80% of items with identical planned/delivered sprint) and shows a plain-English warning explaining why the data is unreliable, instead of silently displaying a misleading "100% no-slip" result. The warning includes a note that reliable slippage data requires the Jira API changelog.
 
